@@ -1,0 +1,8 @@
+.venv
+.env
+.env.local
+geolite
+/__pycache__
+__pycache__
+venv
+.gitlab-ci.yml
