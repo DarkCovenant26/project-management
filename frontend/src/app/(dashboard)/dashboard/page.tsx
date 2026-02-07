@@ -11,6 +11,7 @@ import {
 
 import api from '@/lib/api';
 import { getTasks } from '@/services/tasks';
+import { getProjects } from '@/services/projects';
 import { Project, Task } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
@@ -30,24 +31,21 @@ export default function DashboardPage() {
     const [open, setOpen] = useState(false);
     const [newProject, setNewProject] = useState({ title: '', description: '' });
 
-    useEffect(() => {
-        fetchAllData();
-    }, []);
-
     const fetchAllData = async () => {
         try {
             setLoading(true);
-            const [projectsRes, tasksData] = await Promise.all([
-                api.get('/projects/'),
-                getTasks() // Fetch all tasks
+            const [projectsData, tasksData] = await Promise.all([
+                getProjects(),
+                getTasks()
             ]);
 
-            const fetchedProjects = projectsRes.data;
+            const fetchedProjects = projectsData.results;
+            const fetchedTasks = tasksData.results;
             setProjects(fetchedProjects);
 
             // Calculate stats
-            const pending = tasksData.filter((t: Task) => !t.isCompleted).length;
-            const completed = tasksData.filter((t: Task) => t.isCompleted).length;
+            const pending = fetchedTasks.filter((t: Task) => !t.isCompleted).length;
+            const completed = fetchedTasks.filter((t: Task) => t.isCompleted).length;
 
             setStats({
                 totalProjects: fetchedProjects.length,
@@ -61,6 +59,10 @@ export default function DashboardPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchAllData();
+    }, []);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();

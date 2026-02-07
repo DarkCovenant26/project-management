@@ -1,8 +1,19 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
 export default function Home() {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Welcome to Task Management</h1>
-      <p className="text-muted-foreground">Select a project from the sidebar to get started.</p>
-    </div>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('access');
+    if (token) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
+
+  return null; // or a loading spinner
 }

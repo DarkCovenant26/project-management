@@ -54,6 +54,8 @@ INSTALLED_APPS = [
     'users',
     'projects',
     'tasks',
+    'tags',
+    'activity',
 ]
 
 
@@ -167,6 +169,8 @@ REST_FRAMEWORK = {
         'djangorestframework_camel_case.parser.CamelCaseMultiPartParser',
         'djangorestframework_camel_case.parser.CamelCaseJSONParser',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardResultsPagination',
+    'PAGE_SIZE': 20,
 }
 
 # Auth User Model

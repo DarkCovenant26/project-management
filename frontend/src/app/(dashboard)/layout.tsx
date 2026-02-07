@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ShortcutsProvider } from "@/components/providers/shortcuts-provider";
 
 export default function Layout({
     children,
@@ -6,8 +7,10 @@ export default function Layout({
     children: React.ReactNode;
 }>) {
     return (
-        <DashboardLayout>
-            {children}
-        </DashboardLayout>
+        <ShortcutsProvider>
+            <DashboardLayout>
+                {children}
+            </DashboardLayout>
+        </ShortcutsProvider>
     );
 }

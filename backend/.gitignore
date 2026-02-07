@@ -6,3 +6,10 @@ geolite
 __pycache__
 venv
 .gitlab-ci.yml
+#sqlite
+*.db
+*.sqlite3
+#docs
+*.md
+*.mdx
+#frontend_reference

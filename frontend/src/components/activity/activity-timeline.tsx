@@ -1,0 +1,123 @@
+'use client';
+
+import { useMemo } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+import { Activity } from '@/lib/types';
+import { getTaskActivities, getProjectActivities } from '@/services/activity';
+import { ActivityItem, getDateGroup } from './activity-item';
+import { Button } from '@/components/ui/button';
+
+interface ActivityTimelineProps {
+    taskId?: number;
+    projectId?: number;
+}
+
+export function ActivityTimeline({ taskId, projectId }: ActivityTimelineProps) {
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+    } = useInfiniteQuery({
+        queryKey: taskId ? ['activities', 'task', taskId] : ['activities', 'project', projectId],
+        queryFn: async ({ pageParam = 1 }) => {
+            if (taskId) {
+                return getTaskActivities(taskId, pageParam);
+            }
+            if (projectId) {
+                return getProjectActivities(projectId, pageParam);
+            }
+            return { results: [], next: null };
+        },
+        getNextPageParam: (lastPage) => {
+            if (lastPage.next) {
+                const url = new URL(lastPage.next);
+                return url.searchParams.get('page');
+            }
+            return undefined;
+        },
+        initialPageParam: 1,
+        enabled: Boolean(taskId || projectId),
+    });
+
+    const activities = useMemo(() => {
+        return data?.pages.flatMap(page => page.results) || [];
+    }, [data]);
+
+    // Group activities by date
+    const groupedActivities = useMemo(() => {
+        const groups: { [key: string]: Activity[] } = {};
+
+        activities.forEach(activity => {
+            const group = getDateGroup(new Date(activity.createdAt));
+            if (!groups[group]) {
+                groups[group] = [];
+            }
+            groups[group].push(activity);
+        });
+
+        return groups;
+    }, [activities]);
+
+    const groupOrder = ['Today', 'Yesterday', 'This Week', 'Older'];
+
+    if (isLoading) {
+        return (
+            <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="flex gap-3 animate-pulse">
+                        <div className="h-6 w-6 rounded-full bg-muted" />
+                        <div className="flex-1 space-y-2">
+                            <div className="h-4 w-24 bg-muted rounded" />
+                            <div className="h-3 w-48 bg-muted rounded" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    if (activities.length === 0) {
+        return (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+                No activity yet.
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            {groupOrder.map(groupName => {
+                const groupActivities = groupedActivities[groupName];
+                if (!groupActivities || groupActivities.length === 0) return null;
+
+                return (
+                    <div key={groupName}>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                            {groupName}
+                        </h4>
+                        <div>
+                            {groupActivities.map(activity => (
+                                <ActivityItem key={activity.id} activity={activity} />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+
+            {hasNextPage && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                >
+                    {isFetchingNextPage ? 'Loading...' : 'Load more'}
+                </Button>
+            )}
+        </div>
+    );
+}

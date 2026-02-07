@@ -1,26 +1,184 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Count, Q
-from .models import Task
-from .serializers import TaskSerializer
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
+from .models import Task, Subtask
+from .serializers import TaskSerializer, SubtaskSerializer, BulkActionSerializer
+
+from core.utils import log_grc_event
+from activity.signals import log_activity
+
 
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
-    filterset_fields = ['is_completed', 'priority', 'project']
+    filterset_fields = ['is_completed', 'priority', 'project', 'status']
     search_fields = ['title', 'description']
-    ordering_fields = ['due_date', 'priority', 'created_at']
+    ordering_fields = ['due_date', 'priority', 'created_at', 'status']
     ordering = ['-created_at']
 
     def get_queryset(self):
-        return Task.objects.filter(owner=self.request.user)
+        queryset = Task.objects.filter(owner=self.request.user)
+        
+        # Filter by tag
+        tag_id = self.request.query_params.get('tag')
+        if tag_id:
+            queryset = queryset.filter(task_tags__tag_id=tag_id)
+        
+        return queryset
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        task = serializer.save(owner=self.request.user)
+        log_grc_event(self.request.user, 'CREATE', 'TASK', task.id)
+        log_activity(self.request.user, 'created', 'task', task.id, task.title)
+
+    def perform_update(self, serializer):
+        old_status = serializer.instance.status if serializer.instance else None
+        task = serializer.save()
+        log_grc_event(self.request.user, 'UPDATE', 'TASK', task.id)
+        
+        # Log status change specifically
+        new_status = task.status
+        if old_status and old_status != new_status:
+            log_activity(
+                self.request.user, 'status_changed', 'task', task.id, task.title,
+                delta={'old_status': old_status, 'new_status': new_status},
+                description=f"Task '{task.title}' status changed from '{old_status}' to '{new_status}'"
+            )
+        else:
+            log_activity(self.request.user, 'updated', 'task', task.id, task.title)
+
+    def perform_destroy(self, instance):
+        task_id = instance.id
+        task_title = instance.title
+        instance.delete()  # Soft delete
+        log_grc_event(self.request.user, 'DELETE', 'TASK', task_id)
+        log_activity(self.request.user, 'deleted', 'task', task_id, task_title)
+
+    @action(detail=True, methods=['patch'], url_path='status')
+    def update_status(self, request, pk=None):
+        """Quick status update endpoint for Kanban drag-and-drop."""
+        task = self.get_object()
+        old_status = task.status
+        new_status = request.data.get('status')
+        
+        if new_status not in dict(Task.STATUS_CHOICES):
+            return Response({'status': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        task.status = new_status
+        if new_status == 'done':
+            task.is_completed = True
+        elif old_status == 'done':
+            task.is_completed = False
+        task.save()
+        
+        log_grc_event(request.user, 'UPDATE', 'TASK', task.id)
+        log_activity(
+            request.user, 'status_changed', 'task', task.id, task.title,
+            delta={'old_status': old_status, 'new_status': new_status},
+            description=f"Task '{task.title}' moved to '{new_status}'"
+        )
+        
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
+
+
+class SubtaskViewSet(viewsets.ModelViewSet):
+    """Nested ViewSet for subtasks under a task."""
+    serializer_class = SubtaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        task_id = self.kwargs.get('task_pk')
+        return Subtask.objects.filter(parent_task_id=task_id, parent_task__owner=self.request.user)
+
+    def perform_create(self, serializer):
+        task_id = self.kwargs.get('task_pk')
+        task = get_object_or_404(Task, pk=task_id, owner=self.request.user)
+        
+        # Auto-set order to be last
+        max_order = Subtask.objects.filter(parent_task=task).count()
+        subtask = serializer.save(parent_task=task, order=max_order)
+        
+        log_grc_event(self.request.user, 'CREATE', 'SUBTASK', subtask.id)
+        log_activity(self.request.user, 'created', 'subtask', subtask.id, subtask.title)
+
+    def perform_update(self, serializer):
+        subtask = serializer.save()
+        log_grc_event(self.request.user, 'UPDATE', 'SUBTASK', subtask.id)
+        
+        if subtask.is_completed:
+            log_activity(self.request.user, 'completed', 'subtask', subtask.id, subtask.title)
+        else:
+            log_activity(self.request.user, 'updated', 'subtask', subtask.id, subtask.title)
+
+    def perform_destroy(self, instance):
+        subtask_id = instance.id
+        subtask_title = instance.title
+        instance.delete()
+        log_grc_event(self.request.user, 'DELETE', 'SUBTASK', subtask_id)
+        log_activity(self.request.user, 'deleted', 'subtask', subtask_id, subtask_title)
+
+    @action(detail=False, methods=['put'], url_path='reorder')
+    def reorder(self, request, task_pk=None):
+        """Reorder subtasks."""
+        task = get_object_or_404(Task, pk=task_pk, owner=request.user)
+        order_data = request.data.get('order', [])  # List of subtask IDs in new order
+        
+        for index, subtask_id in enumerate(order_data):
+            Subtask.objects.filter(pk=subtask_id, parent_task=task).update(order=index)
+        
+        subtasks = Subtask.objects.filter(parent_task=task)
+        serializer = SubtaskSerializer(subtasks, many=True)
+        return Response(serializer.data)
+
+
+class TaskBulkActionView(APIView):
+    """Bulk operations on multiple tasks."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = BulkActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        ids = serializer.validated_data['ids']
+        action_type = serializer.validated_data['action']
+        value = serializer.validated_data.get('value')
+        
+        tasks = Task.objects.filter(id__in=ids, owner=request.user)
+        count = tasks.count()
+        
+        if count == 0:
+            return Response({'error': 'No tasks found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if action_type == 'complete':
+            tasks.update(status='done', is_completed=True)
+            for task in tasks:
+                log_activity(request.user, 'completed', 'task', task.id, task.title)
+        elif action_type == 'delete':
+            for task in tasks:
+                task.delete()  # Soft delete
+                log_activity(request.user, 'deleted', 'task', task.id, task.title)
+        elif action_type == 'set_status':
+            if value not in dict(Task.STATUS_CHOICES):
+                return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+            tasks.update(status=value)
+        elif action_type == 'set_priority':
+            if value not in dict(Task.PRIORITY_CHOICES):
+                return Response({'error': 'Invalid priority'}, status=status.HTTP_400_BAD_REQUEST)
+            tasks.update(priority=value)
+        elif action_type == 'move':
+            tasks.update(project_id=value)
+        
+        log_grc_event(request.user, 'BULK_UPDATE', 'TASK', 'multiple', {'ids': ids, 'action': action_type})
+        
+        return Response({'updated': count, 'action': action_type})
+
 
 class DashboardStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -35,18 +193,25 @@ class DashboardStatsView(APIView):
         
         # Priority breakdown
         priority_counts = tasks.values('priority').annotate(count=Count('priority'))
-        # Convert to dict for easier consumption: {'High': 2, 'Medium': 5}
         tasks_by_priority = {item['priority']: item['count'] for item in priority_counts}
         
-        # Ensure all priorities are present in the response even if count is 0
         for priority, _ in Task.PRIORITY_CHOICES:
             if priority not in tasks_by_priority:
                 tasks_by_priority[priority] = 0
+
+        # Status breakdown (for Kanban)
+        status_counts = tasks.values('status').annotate(count=Count('status'))
+        tasks_by_status = {item['status']: item['count'] for item in status_counts}
+        
+        for status_choice, _ in Task.STATUS_CHOICES:
+            if status_choice not in tasks_by_status:
+                tasks_by_status[status_choice] = 0
 
         data = {
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
             "pending_tasks": pending_tasks,
-            "tasks_by_priority": tasks_by_priority
+            "tasks_by_priority": tasks_by_priority,
+            "tasks_by_status": tasks_by_status
         }
         return Response(data)

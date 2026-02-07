@@ -23,6 +23,8 @@ export default function LoginPage() {
             const response = await api.post('/auth/login/', { username, password });
             localStorage.setItem('access', response.data.access);
             localStorage.setItem('refresh', response.data.refresh);
+            // Set cookie for middleware
+            document.cookie = `access=${response.data.access}; path=/; max-age=86400; SameSite=Lax`;
             router.push('/dashboard');
         } catch (err: unknown) {
             console.error(err);
