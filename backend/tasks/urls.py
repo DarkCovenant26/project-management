@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers as nested_routers
 from .views import TaskViewSet, SubtaskViewSet, TaskBulkActionView, DashboardStatsView
+from .analytics_views import TaskDistributionView, ProjectPerformanceView, ProductivityTrendView
 from tags.views import TaskTagViewSet
 from activity.views import TaskActivityViewSet
 
@@ -16,5 +17,8 @@ tasks_router.register(r'activity', TaskActivityViewSet, basename='task-activity'
 
 urlpatterns = [
     path('dashboard/stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
+    path('analytics/distribution/', TaskDistributionView.as_view(), name='task-distribution'),
+    path('analytics/performance/', ProjectPerformanceView.as_view(), name='project-performance'),
+    path('analytics/trend/', ProductivityTrendView.as_view(), name='productivity-trend'),
     path('bulk/', TaskBulkActionView.as_view(), name='task-bulk'),
 ] + router.urls + tasks_router.urls

@@ -1,14 +1,13 @@
 import api from '@/lib/api';
-
-export interface User {
-    id: number;
-    username: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-}
+import { User } from '@/lib/types';
 
 export const getCurrentUser = async (): Promise<User> => {
-    const response = await api.get('/auth/users/me/');
+    const response = await api.get('/users/me/');
     return response.data;
 };
+
+export const updateUserProfile = async (data: Partial<User>): Promise<User> => {
+    const response = await api.patch('/users/me/', data);
+    return response.data;
+};
+

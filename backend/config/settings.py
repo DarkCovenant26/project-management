@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'tasks',
     'tags',
     'activity',
+    'quick_capture',
 ]
 
 

@@ -19,6 +19,9 @@ class TaskSerializer(serializers.ModelSerializer):
     priority = serializers.ChoiceField(choices=['Low', 'Medium', 'High'])
     status = serializers.ChoiceField(choices=['backlog', 'in_progress', 'review', 'done'], required=False)
     
+    startDate = serializers.DateTimeField(source='start_date', required=False, allow_null=True)
+    dueDate = serializers.DateTimeField(source='due_date', required=False, allow_null=True)
+
     # Subtask stats (read-only computed fields)
     subtask_count = serializers.SerializerMethodField()
     subtask_completed = serializers.SerializerMethodField()
@@ -34,7 +37,11 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = '__all__'
+        fields = (
+            'id', 'title', 'description', 'is_completed', 'priority', 'status', 
+            'startDate', 'dueDate', 'project', 'owner', 'created_at', 'updated_at', 
+            'subtask_count', 'subtask_completed', 'subtask_progress', 'tags', 'tag_ids'
+        )
         read_only_fields = ('owner', 'created_at', 'updated_at', 'deleted_at')
 
     def get_subtask_count(self, obj):

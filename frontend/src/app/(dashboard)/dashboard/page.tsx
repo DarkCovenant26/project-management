@@ -1,188 +1,276 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Folder,
     ListTodo,
     CheckCircle2,
-    Plus
+    BarChart3,
+    Target
 } from 'lucide-react';
 
 import api from '@/lib/api';
-import { getTasks } from '@/services/tasks';
+import { useQuery } from '@tanstack/react-query';
 import { getProjects } from '@/services/projects';
-import { Project, Task } from '@/lib/types';
+import { getDashboardStats } from '@/services/tasks';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { KPIWidget } from '@/components/dashboard/widgets/kpi-widget';
+import { ChartWidget } from '@/components/dashboard/widgets/chart-widget';
+import { ActivityWidget } from '@/components/dashboard/widgets/activity-widget';
+import { WidgetGrid } from '@/components/dashboard/widget-grid';
+import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
+import { SortableWidget } from '@/components/dashboard/sortable-widget';
+import { cn } from '@/lib/utils';
+
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+    DragStartEvent,
+    DragOverlay,
+    defaultDropAnimationSideEffects,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { toast } from 'sonner';
+
+import { getCurrentUser } from '@/services/auth';
+
+const DEFAULT_WIDGETS = ['kpi-total', 'kpi-pending', 'kpi-done', 'chart-priority', 'chart-status', 'activity'];
+
+const WIDGET_SPANS: Record<string, string> = {
+    'activity': "lg:col-span-2 xl:col-span-2 2xl:col-span-3",
+};
 
 export default function DashboardPage() {
-    const router = useRouter();
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [stats, setStats] = useState({
-        totalProjects: 0,
-        pendingTasks: 0,
-        completedTasks: 0
+    const [widgets, setWidgets] = useState(DEFAULT_WIDGETS);
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    const { data: user } = useQuery({
+        queryKey: ['user'],
+        queryFn: getCurrentUser,
     });
-    const [loading, setLoading] = useState(true);
-    const [open, setOpen] = useState(false);
-    const [newProject, setNewProject] = useState({ title: '', description: '' });
 
-    const fetchAllData = async () => {
-        try {
-            setLoading(true);
-            const [projectsData, tasksData] = await Promise.all([
-                getProjects(),
-                getTasks()
-            ]);
+    useEffect(() => {
+        if (user?.dashboardPreferences?.widget_order) {
+            setWidgets(user.dashboardPreferences.widget_order);
+        }
+    }, [user]);
 
-            const fetchedProjects = projectsData.results;
-            const fetchedTasks = tasksData.results;
-            setProjects(fetchedProjects);
+    const { data: projectsData, isLoading: loadingProjects } = useQuery({
+        queryKey: ['projects'],
+        queryFn: getProjects,
+    });
 
-            // Calculate stats
-            const pending = fetchedTasks.filter((t: Task) => !t.isCompleted).length;
-            const completed = fetchedTasks.filter((t: Task) => t.isCompleted).length;
+    const { data: statsData, isLoading: loadingStats } = useQuery({
+        queryKey: ['dashboard-stats'],
+        queryFn: getDashboardStats,
+    });
 
-            setStats({
-                totalProjects: fetchedProjects.length,
-                pendingTasks: pending,
-                completedTasks: completed
+    const { data: distData, isLoading: loadingDist } = useQuery({
+        queryKey: ['task-distribution'],
+        queryFn: () => api.get('/tasks/analytics/distribution/').then(res => res.data),
+    });
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const removeWidget = (id: string) => {
+        const newOrder = widgets.filter(w => w !== id);
+        setWidgets(newOrder);
+        persistOrder(newOrder);
+    };
+
+    const persistOrder = (newOrder: string[]) => {
+        // Map to coordinates/metadata as requested
+        const preferences = {
+            ...user?.dashboardPreferences,
+            widget_order: newOrder,
+            widgets_metadata: newOrder.reduce((acc, id, index) => {
+                acc[id] = {
+                    x: index % 4, // simplistic x mapping 
+                    y: Math.floor(index / 4),
+                    w: id === 'activity' ? 3 : 1,
+                    h: 1
+                };
+                return acc;
+            }, {} as any)
+        };
+
+        api.patch('/users/me/', { dashboard_preferences: preferences })
+            .catch(() => toast.error('Failed to save layout'));
+
+        // GRC Audit Trail - Standardized payload
+        api.post('/activity/log_event/', {
+            action: 'rearranged',
+            target_type: 'dashboard',
+            target_id: 'user_layout',
+            target_title: 'User Dashboard Layout',
+            description: `Layout updated: ${newOrder.join(', ')}`,
+            delta: { new_order: newOrder }
+        }).catch(() => { });
+    };
+
+    const handleDragStart = (event: DragStartEvent) => {
+        const id = event.active.id as string;
+        setActiveId(id);
+
+        // GRC Audit Trail for interaction start
+        api.post('/activity/log_event/', {
+            action: 'interacted',
+            target_type: 'widget',
+            target_id: id,
+            target_title: id,
+            description: `Started dragging widget: ${id}`
+        }).catch(() => { });
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        if (over && active.id !== over.id) {
+            setWidgets((items) => {
+                const oldIndex = items.indexOf(active.id as string);
+                const newIndex = items.indexOf(over.id as string);
+                const newOrder = arrayMove(items, oldIndex, newIndex);
+                persistOrder(newOrder);
+                return newOrder;
             });
-
-        } catch (error) {
-            console.error('Failed to fetch dashboard data', error);
-        } finally {
-            setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchAllData();
-    }, []);
+    const renderWidget = (id: string, isOverlay = false) => {
+        const common = { onRemove: isOverlay ? undefined : () => removeWidget(id) };
 
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await api.post('/projects/', { name: newProject.title, description: newProject.description });
-            setOpen(false);
-            setNewProject({ title: '', description: '' });
-            fetchAllData();
-        } catch (error) {
-            console.error('Failed to create project', error);
-        }
+        const widgetMap: Record<string, React.ReactNode> = {
+            'kpi-total': (
+                <KPIWidget
+                    title="Projects"
+                    value={projectsData?.count || 0}
+                    subValue="Active workspaces"
+                    icon={Folder}
+                    loading={loadingProjects}
+                    {...common}
+                />
+            ),
+            'kpi-pending': (
+                <KPIWidget
+                    title="Pending"
+                    value={statsData?.pending_tasks || 0}
+                    subValue="Tasks to do"
+                    icon={ListTodo}
+                    loading={loadingStats}
+                    {...common}
+                />
+            ),
+            'kpi-done': (
+                <KPIWidget
+                    title="Done"
+                    value={statsData?.completed_tasks || 0}
+                    subValue="Across projects"
+                    icon={CheckCircle2}
+                    loading={loadingStats}
+                    {...common}
+                />
+            ),
+            'chart-priority': (
+                <ChartWidget
+                    title="Priority"
+                    description="Task urgency"
+                    icon={Target}
+                    data={distData?.priority.map((p: any) => ({
+                        label: p.priority,
+                        value: p.count,
+                        color: p.priority === 'High' ? 'bg-red-500' : p.priority === 'Medium' ? 'bg-amber-500' : 'bg-blue-500'
+                    })) || []}
+                    loading={loadingDist}
+                    {...common}
+                />
+            ),
+            'chart-status': (
+                <ChartWidget
+                    title="Status"
+                    description="Tasks pipeline"
+                    icon={BarChart3}
+                    data={distData?.status.map((s: any) => ({
+                        label: s.status,
+                        value: s.count,
+                        color: s.status === 'done' ? 'bg-green-500' : s.status === 'in_progress' ? 'bg-blue-500' : 'bg-slate-400'
+                    })) || []}
+                    loading={loadingDist}
+                    {...common}
+                />
+            ),
+            'activity': <ActivityWidget {...common} />,
+        };
+
+        return widgetMap[id] || null;
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <main className="container mx-auto px-6 py-8">
-
-                {/* Stats Section */}
-                <div className="grid gap-4 md:grid-cols-3 mb-8">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-                            <Folder className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{loading ? '-' : stats.totalProjects}</div>
-                            <p className="text-xs text-muted-foreground">Active workspaces</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-                            <ListTodo className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{loading ? '-' : stats.pendingTasks}</div>
-                            <p className="text-xs text-muted-foreground">Across all projects</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
-                            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{loading ? '-' : stats.completedTasks}</div>
-                            <p className="text-xs text-muted-foreground">Successfully finished</p>
-                        </CardContent>
-                    </Card>
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-extrabold tracking-tight">Dashboard</h1>
+                    <p className="text-xs text-muted-foreground">Manage your insights and project performance.</p>
                 </div>
-
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold tracking-tight">Your Projects</h2>
-                    <Dialog open={open} onOpenChange={setOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="shadow-lg shadow-primary/20">
-                                <Plus className="mr-2 h-4 w-4" /> New Project
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Create Project</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={handleCreate} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="title">Title</Label>
-                                    <Input
-                                        id="title"
-                                        value={newProject.title}
-                                        onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                                        placeholder="Project Name"
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="desc">Description</Label>
-                                    <Input
-                                        id="desc"
-                                        value={newProject.description}
-                                        onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                                        placeholder="Short description..."
-                                    />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit">Create</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
+                        setWidgets(DEFAULT_WIDGETS);
+                        persistOrder(DEFAULT_WIDGETS);
+                    }}>
+                        Reset Layout
+                    </Button>
+                    <CreateProjectDialog hideText={false} />
                 </div>
+            </div>
 
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-40 rounded-xl bg-muted/50 animate-pulse" />
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext items={widgets} strategy={rectSortingStrategy}>
+                    <WidgetGrid>
+                        {widgets.map(id => (
+                            <SortableWidget
+                                key={id}
+                                id={id}
+                                className={WIDGET_SPANS[id] || ""}
+                                isGhost={activeId === id}
+                            >
+                                {renderWidget(id)}
+                            </SortableWidget>
                         ))}
-                    </div>
-                ) : projects.length === 0 ? (
-                    <div className="text-center py-20 border border-dashed border-border rounded-xl">
-                        <p className="text-muted-foreground mb-4">No projects found.</p>
-                        <Button variant="outline" onClick={() => setOpen(true)}>
-                            Create your first project
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {projects.map((project) => (
-                            <Card key={project.id} className="hover:border-primary/50 transition-all hover:shadow-lg group cursor-pointer" onClick={() => router.push(`/projects/${project.id}`)}>
-                                <CardHeader>
-                                    <CardTitle className="group-hover:text-primary transition-colors">{project.name}</CardTitle>
-                                    <CardDescription className="line-clamp-2">{project.description || "No description"}</CardDescription>
-                                </CardHeader>
-                                <CardFooter className="text-xs text-muted-foreground">
-                                    Created {new Date(project.createdAt).toLocaleDateString()}
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </main>
+                    </WidgetGrid>
+                </SortableContext>
+
+                <DragOverlay dropAnimation={{
+                    sideEffects: defaultDropAnimationSideEffects({
+                        styles: {
+                            active: { opacity: '0.4' },
+                        },
+                    }),
+                }}>
+                    {activeId ? (
+                        <div className={cn("h-full w-full", WIDGET_SPANS[activeId] || "")}>
+                            {renderWidget(activeId, true)}
+                        </div>
+                    ) : null}
+                </DragOverlay>
+            </DndContext>
         </div>
     );
 }

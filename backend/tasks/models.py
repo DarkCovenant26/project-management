@@ -25,6 +25,7 @@ class Task(models.Model):
     
     STATUS_CHOICES = [
         ('backlog', 'Backlog'),
+        ('todo', 'To Do'),
         ('in_progress', 'In Progress'),
         ('review', 'Review'),
         ('done', 'Done'),
@@ -35,6 +36,7 @@ class Task(models.Model):
     is_completed = models.BooleanField(default=False)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='Medium')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='backlog')
+    start_date = models.DateTimeField(null=True, blank=True)
     due_date = models.DateTimeField(null=True, blank=True)
     
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True)

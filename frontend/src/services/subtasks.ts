@@ -24,5 +24,5 @@ export const deleteSubtask = async (taskId: number | string, subtaskId: number |
 };
 
 export const reorderSubtasks = async (taskId: number | string, order: number[]): Promise<void> => {
-    await api.post(`/tasks/${taskId}/subtasks/reorder/`, { order });
+    await api.put(`/tasks/${taskId}/subtasks/reorder/`, { order });
 };

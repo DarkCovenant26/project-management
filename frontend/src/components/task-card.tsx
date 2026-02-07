@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, User } from 'lucide-react';
+import { Calendar, User, ChevronDown, ChevronRight } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TagBadge } from '@/components/tags/tag-badge';
 import { SubtaskProgress } from '@/components/subtasks/subtask-progress';
+import { SubtaskList } from '@/components/subtasks/subtask-list';
 import { cn } from '@/lib/utils';
 
 interface TaskCardProps {
@@ -23,6 +25,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
+    const [isExpanded, setIsExpanded] = useState(false);
     const dateStatus = getDateStatus(task.dueDate);
     const dateColorClass = getDateStatusColor(dateStatus);
 
@@ -65,8 +68,31 @@ export function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
                 </p>
 
                 {task.subtasks && task.subtasks.length > 0 && (
-                    <div className="mt-2">
-                        <SubtaskProgress subtasks={task.subtasks} />
+                    <div className="mt-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                            <SubtaskProgress subtasks={task.subtasks} />
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsExpanded(!isExpanded);
+                                }}
+                            >
+                                {isExpanded ? (
+                                    <>Collapse <ChevronDown className="ml-1 h-3 w-3" /></>
+                                ) : (
+                                    <>Expand <ChevronRight className="ml-1 h-3 w-3" /></>
+                                )}
+                            </Button>
+                        </div>
+
+                        {isExpanded && (
+                            <div className="pt-2 border-t border-dashed">
+                                <SubtaskList taskId={task.id} subtasks={task.subtasks} />
+                            </div>
+                        )}
                     </div>
                 )}
 

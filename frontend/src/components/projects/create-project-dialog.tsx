@@ -16,7 +16,9 @@ import { ProjectForm } from './project-form';
 import { createProject } from '@/services/projects';
 import { ProjectFormValues } from '@/lib/validations/project';
 
-export function CreateProjectDialog() {
+import { cn } from '@/lib/utils';
+
+export function CreateProjectDialog({ hideText }: { hideText?: boolean }) {
     const [open, setOpen] = useState(false);
     const queryClient = useQueryClient();
 
@@ -35,9 +37,16 @@ export function CreateProjectDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-sidebar-foreground">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Project
+                <Button
+                    variant="ghost"
+                    className={cn(
+                        "text-muted-foreground hover:text-sidebar-foreground",
+                        hideText ? "h-8 w-8 p-0 flex justify-center" : "w-full justify-start"
+                    )}
+                    title={hideText ? "Add Project" : undefined}
+                >
+                    <Plus className={cn("h-4 w-4", !hideText && "mr-2")} />
+                    {!hideText && "Add Project"}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

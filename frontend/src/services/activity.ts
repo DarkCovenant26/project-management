@@ -16,3 +16,12 @@ export const getProjectActivities = async (projectId: number | string, page?: nu
     }
     return response.data;
 };
+
+
+export const getUserActivities = async (page?: number): Promise<{ results: Activity[], next?: string | null }> => {
+    const response = await api.get('/activity/', { params: { page } });
+    if (Array.isArray(response.data)) {
+        return { results: response.data, next: null };
+    }
+    return response.data;
+};

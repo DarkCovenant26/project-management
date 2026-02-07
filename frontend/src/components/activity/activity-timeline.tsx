@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { Activity } from '@/lib/types';
-import { getTaskActivities, getProjectActivities } from '@/services/activity';
+import { getTaskActivities, getProjectActivities, getUserActivities } from '@/services/activity';
 import { ActivityItem, getDateGroup } from './activity-item';
 import { Button } from '@/components/ui/button';
 
@@ -21,25 +21,29 @@ export function ActivityTimeline({ taskId, projectId }: ActivityTimelineProps) {
         isFetchingNextPage,
         isLoading,
     } = useInfiniteQuery({
-        queryKey: taskId ? ['activities', 'task', taskId] : ['activities', 'project', projectId],
-        queryFn: async ({ pageParam = 1 }) => {
+        queryKey: taskId
+            ? ['activities', 'task', taskId]
+            : projectId
+                ? ['activities', 'project', projectId]
+                : ['activities', 'user'],
+        queryFn: async ({ pageParam = 1 }: { pageParam?: number }) => {
             if (taskId) {
                 return getTaskActivities(taskId, pageParam);
             }
             if (projectId) {
                 return getProjectActivities(projectId, pageParam);
             }
-            return { results: [], next: null };
+            return getUserActivities(pageParam);
         },
         getNextPageParam: (lastPage) => {
             if (lastPage.next) {
                 const url = new URL(lastPage.next);
-                return url.searchParams.get('page');
+                const page = url.searchParams.get('page');
+                return page ? parseInt(page) : undefined;
             }
             return undefined;
         },
         initialPageParam: 1,
-        enabled: Boolean(taskId || projectId),
     });
 
     const activities = useMemo(() => {

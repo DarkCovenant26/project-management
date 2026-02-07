@@ -2,6 +2,31 @@ export interface User {
     id: number;
     username: string;
     email: string;
+    first_name?: string;
+    last_name?: string;
+    dashboardPreferences?: {
+        widget_order?: string[];
+        [key: string]: any;
+    };
+    notificationPreferences?: {
+        email?: boolean;
+        reminders?: boolean;
+        projectUpdates?: boolean;
+        [key: string]: any;
+    };
+    appPreferences?: {
+        compactMode?: boolean;
+        defaultView?: string;
+        [key: string]: any;
+    };
+}
+
+
+export interface BoardColumn {
+    id: string;
+    title: string;
+    status: string;
+    visible: boolean;
 }
 
 export interface Project {
@@ -11,9 +36,24 @@ export interface Project {
     createdAt: string;
     updatedAt: string;
     owner: number;
+    boardSettings?: { columns: BoardColumn[] };
+    boardColumns?: BoardColumn[];
+    members?: ProjectMember[];
+    memberCount?: number;
 }
 
-export type TaskStatus = 'backlog' | 'in_progress' | 'review' | 'done';
+export interface ProjectMember {
+    id: string;
+    userId: number;
+    username: string;
+    email: string;
+    role: 'owner' | 'admin' | 'member' | 'viewer';
+    invitedAt: string;
+    invitedById?: number;
+    accepted: boolean;
+}
+
+export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'review' | 'done';
 
 export interface Tag {
     id: number;
@@ -48,6 +88,7 @@ export interface Task {
     isCompleted: boolean;
     status: TaskStatus;
     priority: 'Low' | 'Medium' | 'High';
+    startDate?: string;
     dueDate?: string;
     projectId?: number;
     owner: number;

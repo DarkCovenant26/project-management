@@ -15,7 +15,19 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get activity logs for the current user."""
-        return ActivityLog.objects.filter(actor=self.request.user)[:50]
+        return ActivityLog.objects.filter(actor=self.request.user).order_by('-created_at')[:50]
+
+    from rest_framework.decorators import action
+    @action(detail=False, methods=['post'])
+    def log_event(self, request):
+        """Allow manual logging for GRC audit trail from frontend."""
+        data = request.data.copy()
+        data['actor'] = request.user.id
+        serializer = self.get_serializer(data=data)
+        if serializer.is_valid():
+            serializer.save(actor=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
 
 class TaskActivityViewSet(viewsets.ViewSet):

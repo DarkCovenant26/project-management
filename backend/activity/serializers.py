@@ -12,4 +12,4 @@ class ActivityLogSerializer(serializers.ModelSerializer):
             'id', 'actor', 'actor_username', 'actor_email', 'action', 'target_type',
             'target_id', 'target_title', 'delta', 'description', 'created_at'
         ]
-        read_only_fields = fields  # All fields are read-only (immutable logs)
+        read_only_fields = ['id', 'actor', 'actor_username', 'actor_email', 'created_at']

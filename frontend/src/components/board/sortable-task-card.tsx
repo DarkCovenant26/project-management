@@ -2,24 +2,51 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { motion } from 'framer-motion';
 import { Task } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, User } from 'lucide-react';
-import { format } from 'date-fns';
+import {
+    ListChecks,
+    ChevronUp,
+    ChevronDown,
+    Equal,
+    Clock,
+    Paperclip,
+    MessageSquare
+} from 'lucide-react';
+import { format, isPast, isToday, addDays, isBefore } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface SortableTaskCardProps {
     task: Task;
     isDragging?: boolean;
+    onClick?: (task: Task) => void;
 }
 
-const priorityColors = {
-    High: 'bg-red-500/10 text-red-500 border-red-500/20',
-    Medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-    Low: 'bg-green-500/10 text-green-500 border-green-500/20',
+const priorityConfig = {
+    High: {
+        icon: <ChevronUp className="h-3.5 w-3.5" />,
+        bg: 'bg-gradient-to-br from-red-500/20 to-red-600/10',
+        border: 'border-red-500/30',
+        text: 'text-red-400',
+        glow: 'shadow-red-500/20'
+    },
+    Medium: {
+        icon: <Equal className="h-3.5 w-3.5" />,
+        bg: 'bg-gradient-to-br from-amber-500/20 to-amber-600/10',
+        border: 'border-amber-500/30',
+        text: 'text-amber-400',
+        glow: 'shadow-amber-500/20'
+    },
+    Low: {
+        icon: <ChevronDown className="h-3.5 w-3.5" />,
+        bg: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10',
+        border: 'border-blue-500/30',
+        text: 'text-blue-400',
+        glow: 'shadow-blue-500/20'
+    },
 };
 
-export function SortableTaskCard({ task, isDragging }: SortableTaskCardProps) {
+export function SortableTaskCard({ task, isDragging, onClick }: SortableTaskCardProps) {
     const {
         attributes,
         listeners,
@@ -30,70 +57,146 @@ export function SortableTaskCard({ task, isDragging }: SortableTaskCardProps) {
     } = useSortable({ id: task.id });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
     };
 
+    const isOverdue = task.dueDate ? isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate)) : false;
+    const isDueSoon = task.dueDate && !isOverdue ? isBefore(new Date(task.dueDate), addDays(new Date(), 3)) : false;
+
+    const priority = priorityConfig[task.priority];
+
     return (
-        <div
+        <motion.div
             ref={setNodeRef}
             style={style}
             {...attributes}
             {...listeners}
+            onClick={() => onClick?.(task)}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             className={cn(
-                'rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing transition-all',
-                'hover:border-primary/50 hover:shadow-md',
-                (isDragging || isSorting) && 'opacity-50 shadow-lg ring-2 ring-primary/20',
+                'group relative rounded-xl cursor-pointer transition-all duration-300 select-none',
+                'bg-gradient-to-br from-card via-card to-card/90',
+                'border border-white/10 hover:border-white/20',
+                'shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10',
+                (isDragging || isSorting) ? 'opacity-0' : 'opacity-100',
             )}
         >
-            <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
+            {/* Hover Glow Effect */}
+            <div className="absolute -inset-px rounded-xl bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <div className="relative p-3.5 space-y-3">
+                {/* Color Tags */}
+                {task.tags && task.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                        {task.tags.slice(0, 3).map(tag => (
+                            <div
+                                key={tag.id}
+                                className="h-2 w-10 rounded-full shadow-sm"
+                                style={{
+                                    backgroundColor: tag.color,
+                                    boxShadow: `0 0 8px ${tag.color}40`
+                                }}
+                                title={tag.name}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* Title & Priority */}
+                <div className="flex items-start justify-between gap-3">
                     <h4 className={cn(
-                        'text-sm font-medium leading-tight',
-                        task.isCompleted && 'line-through text-muted-foreground'
+                        'text-sm font-semibold leading-snug tracking-tight text-foreground',
+                        task.isCompleted && 'line-through text-muted-foreground/70'
                     )}>
                         {task.title}
                     </h4>
-                    <Badge variant="outline" className={cn('text-xs shrink-0', priorityColors[task.priority])}>
-                        {task.priority}
-                    </Badge>
+                    <div className={cn(
+                        "flex items-center justify-center h-6 w-6 rounded-lg border shrink-0 shadow-sm",
+                        priority.bg, priority.border, priority.text, priority.glow
+                    )}>
+                        {priority.icon}
+                    </div>
                 </div>
 
+                {/* Description */}
                 {task.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
+                    <p className="text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed">
                         {task.description}
                     </p>
                 )}
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    {task.dueDate && (
-                        <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{format(new Date(task.dueDate), 'MMM d')}</span>
-                        </div>
-                    )}
-                    <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                    </div>
-                </div>
-
-                {task.tags && task.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                        {task.tags.slice(0, 3).map(tag => (
-                            <span
-                                key={tag.id}
-                                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
-                                style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                            >
-                                {tag.name}
+                {/* Subtask Progress */}
+                {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                            <span className="flex items-center gap-1.5">
+                                <ListChecks className="h-3.5 w-3.5" />
+                                Progress
                             </span>
-                        ))}
-                        {task.tags.length > 3 && (
-                            <span className="text-xs text-muted-foreground">+{task.tags.length - 3}</span>
-                        )}
+                            <span className="tabular-nums">
+                                {task.subtasks.filter(st => st.isCompleted).length}/{task.subtasks.length}
+                            </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{
+                                    width: `${(task.subtasks.filter(st => st.isCompleted).length / task.subtasks.length) * 100}%`
+                                }}
+                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                            />
+                        </div>
                     </div>
                 )}
+
+                {/* Footer Meta */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="flex items-center gap-2.5">
+                        {/* Due Date */}
+                        {task.dueDate && (
+                            <div className={cn(
+                                "flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-md",
+                                isOverdue
+                                    ? "bg-red-500/15 text-red-400 border border-red-500/20"
+                                    : isDueSoon
+                                        ? "bg-amber-500/15 text-amber-400 border border-amber-500/20"
+                                        : "bg-muted/50 text-muted-foreground border border-white/5"
+                            )}>
+                                <Clock className="h-3 w-3" />
+                                <span>{format(new Date(task.dueDate), 'MMM d')}</span>
+                            </div>
+                        )}
+
+                        {/* Activity Indicators */}
+                        <div className="flex items-center gap-2 text-muted-foreground/50">
+                            <div className="flex items-center gap-0.5">
+                                <MessageSquare className="h-3 w-3" />
+                                <span className="text-[10px] tabular-nums">2</span>
+                            </div>
+                            <div className="flex items-center gap-0.5">
+                                <Paperclip className="h-3 w-3" />
+                                <span className="text-[10px] tabular-nums">1</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Assignee Avatar */}
+                    <div className="flex items-center">
+                        <div className={cn(
+                            "h-6 w-6 rounded-full flex items-center justify-center",
+                            "bg-gradient-to-br from-violet-500 to-purple-600",
+                            "text-[9px] font-bold text-white uppercase",
+                            "ring-2 ring-card shadow-md"
+                        )}>
+                            {task.owner ? `U${task.owner}` : '??'}
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
+

@@ -28,12 +28,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     return (
         <ErrorBoundary>
-            <div className="flex h-full flex-col bg-background text-foreground">
+            <div className="space-y-6">
                 {/* Project Header */}
-                <div className="flex items-center justify-between border-b border-border p-6 bg-card/50 backdrop-blur-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{project?.name}</h1>
-                        <p className="text-muted-foreground">{project?.description}</p>
+                        <h1 className="text-2xl font-bold tracking-tight">{project?.title}</h1>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold opacity-70">
+                            {project?.description || 'Project Workspace'}
+                        </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <CreateTaskDialog projectId={projectIdNum} />
@@ -41,9 +43,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 {/* Tasks Container (Handles view switching, filtering, and tasks) */}
-                <div className="flex-1 overflow-auto p-6">
-                    <TasksContainer projectId={projectIdNum} />
-                </div>
+                <TasksContainer projectId={projectIdNum} />
             </div>
         </ErrorBoundary>
     );

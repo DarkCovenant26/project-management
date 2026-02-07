@@ -18,7 +18,7 @@ const priorityColors = {
 
 export function DragOverlayCard({ task }: DragOverlayCardProps) {
     return (
-        <div className="rounded-lg border bg-card p-3 shadow-xl ring-2 ring-primary/30 rotate-3 scale-105">
+        <div className="rounded-lg border bg-card p-3 shadow-xl ring-2 ring-primary/30">
             <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                     <h4 className={cn(

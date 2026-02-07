@@ -13,6 +13,8 @@ class ActivityLog(models.Model):
         ('assigned', 'Assigned'),
         ('tagged', 'Tagged'),
         ('untagged', 'Untagged'),
+        ('rearranged', 'Rearranged'),
+        ('interacted', 'Interacted'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-type ViewPreference = 'list' | 'board';
+type ViewPreference = 'list' | 'board' | 'spreadsheet' | 'timeline' | 'calendar';
 
 const STORAGE_KEY = 'task-view-preference';
 
@@ -12,7 +12,7 @@ export function useViewPreference() {
 
     useEffect(() => {
         const stored = localStorage.getItem(STORAGE_KEY) as ViewPreference | null;
-        if (stored && (stored === 'list' || stored === 'board')) {
+        if (stored && (stored === 'list' || stored === 'board' || stored === 'spreadsheet' || stored === 'timeline' || stored === 'calendar')) {
             setView(stored);
         }
         setIsLoaded(true);

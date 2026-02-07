@@ -4,9 +4,13 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    dashboardPreferences = serializers.JSONField(source='dashboard_preferences', required=False)
+    notificationPreferences = serializers.JSONField(source='notification_preferences', required=False)
+    appPreferences = serializers.JSONField(source='app_preferences', required=False)
+    
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'dashboardPreferences', 'notificationPreferences', 'appPreferences')
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
