@@ -23,6 +23,7 @@ interface TaskDetailSheetProps {
 }
 
 const priorityColors: Record<string, string> = {
+    Critical: 'bg-red-600/20 text-red-600 border-red-600/30',
     High: 'bg-red-500/10 text-red-500 border-red-500/20',
     Medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
     Low: 'bg-green-500/10 text-green-500 border-green-500/20',
@@ -46,7 +47,7 @@ export function TaskDetailSheet({ task: initialTask, open, onClose }: TaskDetail
     });
 
     const { mutate: addTag } = useMutation({
-        mutationFn: (tagId: number) => addTaskTag(task!.id, tagId),
+        mutationFn: (tagId: number | string) => addTaskTag(task!.id, tagId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['task', task?.id] });
             queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Update lists too
@@ -56,7 +57,7 @@ export function TaskDetailSheet({ task: initialTask, open, onClose }: TaskDetail
     });
 
     const { mutate: removeTag } = useMutation({
-        mutationFn: (tagId: number) => removeTaskTag(task!.id, tagId),
+        mutationFn: (tagId: number | string) => removeTaskTag(task!.id, tagId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['task', task?.id] });
             queryClient.invalidateQueries({ queryKey: ['tasks'] });

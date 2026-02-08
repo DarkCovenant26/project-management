@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Task, TaskStatus, BoardColumn as BoardColumnType, Project } from '@/lib/types';
+import { BulkActionBar } from '@/components/tasks/bulk-action-bar';
 import { updateTask, createTask, updateTaskStatus } from '@/services/tasks';
 import { BoardColumn } from './board-column';
 import { DragOverlayCard } from './drag-overlay-card';
@@ -27,6 +28,8 @@ import { TaskDetailSheet } from '@/components/tasks/task-detail-sheet';
 import { BoardHeader } from './board-header';
 import { ViewToggle, ViewPreference } from '@/components/tasks/view-toggle';
 import { BoardSettingsDialog } from './board-settings-dialog';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface KanbanBoardProps {
     tasks: Task[];
@@ -36,10 +39,15 @@ interface KanbanBoardProps {
     onColumnsChange?: (columns: BoardColumnType[]) => void;
     view?: ViewPreference;
     onViewChange?: (view: ViewPreference) => void;
+    selectedTaskIds?: (string | number)[];
+    onToggleSelection?: (taskId: string | number, event?: React.MouseEvent) => void;
+    onToggleOne?: (taskId: string | number) => void;
+    onSelectMany?: (ids: (string | number)[]) => void;
+    onDeselectMany?: (ids: (string | number)[]) => void;
 }
 
 const DEFAULT_COLUMNS: BoardColumnType[] = [
-    { id: 'backlog', title: 'Backlog', status: 'backlog', visible: false },
+    { id: 'backlog', title: 'Backlog', status: 'backlog', visible: true },
     { id: 'todo', title: 'To Do', status: 'todo', visible: true },
     { id: 'in_progress', title: 'In Progress', status: 'in_progress', visible: true },
     { id: 'review', title: 'Review', status: 'review', visible: true },
@@ -54,12 +62,28 @@ const COLUMN_COLORS: Record<string, string> = {
     done: 'hsl(var(--success, 142 76% 36%))',
 };
 
-export function KanbanBoard({ tasks, project, projectId, columns: propColumns, onColumnsChange, view = 'board', onViewChange }: KanbanBoardProps) {
+export function KanbanBoard({
+    tasks,
+    project,
+    projectId,
+    columns: propColumns,
+    onColumnsChange,
+    view = 'board',
+    onViewChange,
+    selectedTaskIds = [],
+    onToggleSelection,
+    onToggleOne,
+    onSelectMany,
+    onDeselectMany
+}: KanbanBoardProps) {
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [localColumns, setLocalColumns] = useState<BoardColumnType[]>(propColumns || DEFAULT_COLUMNS);
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+    const [selectedAssignees, setSelectedAssignees] = useState<number[]>([]);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+
     const queryClient = useQueryClient();
 
     // Use prop columns if available, otherwise local state
@@ -114,14 +138,26 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
         },
     });
 
+    const toggleAssignee = (userId: number) => {
+        setSelectedAssignees(prev =>
+            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+    };
+
     const filteredTasks = useMemo(() => {
         return tasks.filter(task => {
             const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
             const matchesPriority = priorityFilter ? task.priority === priorityFilter : true;
-            return matchesSearch && matchesPriority;
+
+            const matchesAssignee = selectedAssignees.length === 0 ||
+                task.assignees?.some(a => selectedAssignees.includes(Number(a.id))) ||
+                (selectedAssignees.includes(Number(task.owner)) && (!task.assignees || task.assignees.length === 0));
+
+            return matchesSearch && matchesPriority && matchesAssignee;
         });
-    }, [tasks, searchQuery, priorityFilter]);
+    }, [tasks, searchQuery, priorityFilter, selectedAssignees]);
 
     const tasksByStatus = useMemo(() => {
         const grouped: Record<string, Task[]> = {};
@@ -216,6 +252,14 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
         onColumnsChange?.(newColumns);
     };
 
+    const toggleTaskSelection = (taskId: string | number, event?: React.MouseEvent) => {
+        onToggleSelection?.(taskId, event);
+    };
+
+    const toggleSelectionMode = () => {
+        setIsSelectionMode(!isSelectionMode);
+    };
+
     return (
         <div className="space-y-4">
             {/* Toolbar Row: Filter bar left, View toggles + Settings right */}
@@ -224,21 +268,41 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
                     <BoardHeader
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
+                        projectId={projectId || project?.id || ''}
                         columns={columns}
                         onColumnsChange={handleColumnsChange}
                         filterPriority={priorityFilter}
                         onPriorityFilterChange={setPriorityFilter}
+                        selectedAssignees={selectedAssignees}
+                        onAssigneeToggle={toggleAssignee}
                     />
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                     {onViewChange && <ViewToggle view={view} onViewChange={onViewChange} />}
                     {project && (
-                        <BoardSettingsDialog
-                            projectId={project.id}
-                            columns={columns}
-                            onColumnsChange={handleColumnsChange}
-                        />
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant={isSelectionMode ? "secondary" : "ghost"}
+                                size="sm"
+                                onClick={toggleSelectionMode}
+                                className={cn(
+                                    "h-8 px-2 sm:px-3 text-xs font-medium gap-2",
+                                    isSelectionMode && "bg-primary/10 text-primary hover:bg-primary/20"
+                                )}
+                            >
+                                <div className={cn(
+                                    "h-1.5 w-1.5 rounded-full transition-all duration-300",
+                                    isSelectionMode ? "bg-primary animate-pulse" : "bg-muted-foreground/30"
+                                )} />
+                                {isSelectionMode ? "Exit Selection" : "Bulk Select"}
+                            </Button>
+                            <BoardSettingsDialog
+                                projectId={projectId || project?.id || ''}
+                                columns={localColumns}
+                                onColumnsChange={handleColumnsChange}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
@@ -263,11 +327,19 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
                             >
                                 <BoardColumn
                                     id={column.id}
+                                    status={column.status}
                                     title={column.title}
                                     color={COLUMN_COLORS[column.status] || 'hsl(220 14% 50%)'}
                                     tasks={tasksByStatus[column.status] || []}
                                     onTaskClick={setSelectedTask}
                                     onAddTask={(title) => addTask({ title, status: column.status as TaskStatus })}
+                                    wipLimit={column.wipLimit}
+                                    selectedTaskIds={selectedTaskIds.map(String)}
+                                    onToggleSelection={toggleTaskSelection}
+                                    onToggleOne={onToggleOne}
+                                    selectionMode={isSelectionMode}
+                                    onSelectAll={onSelectMany}
+                                    onDeselectAll={onDeselectMany}
                                 />
                             </motion.div>
                         ))}
@@ -293,3 +365,4 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
         </div>
     );
 }
+

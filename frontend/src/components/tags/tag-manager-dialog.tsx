@@ -53,7 +53,7 @@ export function TagManagerDialog({ projectId, trigger }: TagManagerDialogProps) 
     });
 
     const { mutate: update, isPending: isUpdating } = useMutation({
-        mutationFn: ({ id, data }: { id: number; data: Partial<Tag> }) => updateTag(id, data),
+        mutationFn: ({ id, data }: { id: number | string; data: Partial<Tag> }) => updateTag(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tags', projectId] });
             toast.success('Tag updated');
@@ -64,7 +64,7 @@ export function TagManagerDialog({ projectId, trigger }: TagManagerDialogProps) 
     });
 
     const { mutate: remove } = useMutation({
-        mutationFn: (id: number) => deleteTag(id),
+        mutationFn: (id: number | string) => deleteTag(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tags', projectId] });
             toast.success('Tag deleted');

@@ -136,6 +136,20 @@ function SortableColumnItem({ column, onUpdate }: SortableColumnItemProps) {
             />
 
             <div className="flex items-center gap-2">
+                <Label htmlFor={`wip-${column.id}`} className="sr-only">WIP Limit</Label>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 border border-white/5">
+                    <span className="text-[10px] font-bold text-muted-foreground/60">WIP</span>
+                    <input
+                        id={`wip-${column.id}`}
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={column.wipLimit || ''}
+                        onChange={(e) => onUpdate({ wipLimit: e.target.value ? parseInt(e.target.value) : undefined })}
+                        className="w-8 h-4 bg-transparent border-none text-[10px] font-mono font-bold focus:ring-0 p-0 text-center"
+                        placeholder="∞"
+                    />
+                </div>
                 <Label htmlFor={`visible-${column.id}`} className="sr-only">Visible</Label>
                 <button
                     onClick={() => onUpdate({ visible: !column.visible })}

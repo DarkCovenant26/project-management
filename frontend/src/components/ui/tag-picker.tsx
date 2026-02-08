@@ -28,8 +28,8 @@ import { cn } from '@/lib/utils';
 
 interface TagPickerProps {
     selectedTags: Tag[];
-    onAddTag: (tagId: number) => void;
-    onRemoveTag: (tagId: number) => void;
+    onAddTag: (tagId: number | string) => void;
+    onRemoveTag: (tagId: number | string) => void;
     projectId?: string | number;
 }
 

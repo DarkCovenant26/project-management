@@ -10,7 +10,8 @@ interface DragOverlayCardProps {
     task: Task;
 }
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
+    Critical: 'bg-red-600/20 text-red-600 border-red-600/30',
     High: 'bg-red-500/10 text-red-500 border-red-500/20',
     Medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
     Low: 'bg-green-500/10 text-green-500 border-green-500/20',

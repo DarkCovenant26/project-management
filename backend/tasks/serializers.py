@@ -151,7 +151,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class BulkActionSerializer(serializers.Serializer):
     ids = serializers.ListField(
-        child=serializers.IntegerField(),
+        child=serializers.UUIDField(),
         min_length=1,
         max_length=50
     )

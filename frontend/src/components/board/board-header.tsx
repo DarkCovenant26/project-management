@@ -1,9 +1,11 @@
 'use client';
 
-import { Search, SlidersHorizontal, X, Users } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Users, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BoardColumn as BoardColumnType, Project } from '@/lib/types';
+import { BoardColumn as BoardColumnType, ProjectMember } from '@/lib/types';
+import { getProjectMembers } from '@/services/projects';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
@@ -23,10 +25,13 @@ import {
 interface BoardHeaderProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
+    projectId: string | number;
     columns: BoardColumnType[];
     onColumnsChange: (columns: BoardColumnType[]) => void;
     filterPriority: string | null;
     onPriorityFilterChange: (priority: string | null) => void;
+    selectedAssignees: number[];
+    onAssigneeToggle: (userId: number) => void;
 }
 
 const priorityColors: Record<string, string> = {
@@ -35,21 +40,31 @@ const priorityColors: Record<string, string> = {
     Low: 'from-blue-500 to-indigo-600',
 };
 
-// Mock team members - replace with real data
-const teamMembers = [
-    { id: 1, initials: 'JD', name: 'John Doe', gradient: 'from-violet-500 to-purple-600', selected: false },
-    { id: 2, initials: 'AS', name: 'Alice Smith', gradient: 'from-blue-500 to-cyan-600', selected: false },
-    { id: 3, initials: 'MK', name: 'Mike Kim', gradient: 'from-emerald-500 to-teal-600', selected: false },
+const AVATAR_COLORS = [
+    'from-violet-500 to-purple-600',
+    'from-blue-500 to-cyan-600',
+    'from-emerald-500 to-teal-600',
+    'from-rose-500 to-pink-600',
+    'from-orange-500 to-amber-600',
 ];
 
 export function BoardHeader({
     searchQuery,
     onSearchChange,
+    projectId,
     columns,
     onColumnsChange,
     filterPriority,
-    onPriorityFilterChange
+    onPriorityFilterChange,
+    selectedAssignees,
+    onAssigneeToggle
 }: BoardHeaderProps) {
+    const { data: members, isLoading } = useQuery({
+        queryKey: ['project-members', projectId],
+        queryFn: () => getProjectMembers(projectId),
+        enabled: !!projectId,
+    });
+
     return (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 py-2">
             {/* Search and Filters Group */}
@@ -76,26 +91,40 @@ export function BoardHeader({
                     {/* Avatar Filters */}
                     <TooltipProvider>
                         <div className="flex items-center">
-                            <div className="flex -space-x-2">
-                                {teamMembers.map((member) => (
-                                    <Tooltip key={member.id}>
-                                        <TooltipTrigger asChild>
-                                            <button
-                                                className={cn(
-                                                    "h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white",
-                                                    "bg-gradient-to-br ring-2 ring-background shadow-sm",
-                                                    "hover:ring-primary/50 hover:scale-110 transition-all duration-200",
-                                                    member.gradient
-                                                )}
-                                            >
-                                                {member.initials}
-                                            </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="bottom">
-                                            <p className="text-xs">{member.name}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                ))}
+                            <div className="flex -space-x-2 mr-2">
+                                {isLoading ? (
+                                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                ) : (
+                                    members?.slice(0, 5).map((member, index) => {
+                                        const isSelected = selectedAssignees.includes(member.userId);
+                                        return (
+                                            <Tooltip key={member.id}>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        onClick={() => onAssigneeToggle(member.userId)}
+                                                        className={cn(
+                                                            "h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white",
+                                                            "bg-gradient-to-br ring-2 ring-background shadow-sm",
+                                                            "hover:ring-primary/50 hover:scale-110 transition-all duration-200",
+                                                            AVATAR_COLORS[index % AVATAR_COLORS.length],
+                                                            isSelected ? "ring-primary ring-offset-2 ring-offset-background z-10 scale-110 shadow-md" : "opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0"
+                                                        )}
+                                                    >
+                                                        {(member.username?.[0] || member.email?.[0] || '?').toUpperCase()}
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom">
+                                                    <p className="text-xs">{member.username || member.email}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        );
+                                    })
+                                )}
+                                {members && members.length > 5 && (
+                                    <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                                        +{members.length - 5}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </TooltipProvider>
@@ -130,10 +159,10 @@ export function BoardHeader({
                                     All
                                 </div>
                             </DropdownMenuItem>
-                            {(['High', 'Medium', 'Low'] as const).map(priority => (
+                            {(['Critical', 'High', 'Medium', 'Low'] as const).map(priority => (
                                 <DropdownMenuItem key={priority} onClick={() => onPriorityFilterChange(priority)}>
                                     <div className="flex items-center gap-2">
-                                        <div className={cn("h-2 w-2 rounded-full bg-gradient-to-r", priorityColors[priority])} />
+                                        <div className={cn("h-2 w-2 rounded-full bg-gradient-to-r", priorityColors[priority] || 'from-slate-400 to-slate-500')} />
                                         {priority}
                                     </div>
                                 </DropdownMenuItem>
@@ -142,7 +171,7 @@ export function BoardHeader({
                     </DropdownMenu>
 
                     {/* Clear Filters (only show when active) */}
-                    {(searchQuery || filterPriority) && (
+                    {(searchQuery || filterPriority || selectedAssignees.length > 0) && (
                         <Button
                             variant="ghost"
                             size="icon"
@@ -150,6 +179,9 @@ export function BoardHeader({
                             onClick={() => {
                                 onSearchChange('');
                                 onPriorityFilterChange(null);
+                                if (selectedAssignees.length > 0) {
+                                    selectedAssignees.forEach(id => onAssigneeToggle(id));
+                                }
                             }}
                         >
                             <X className="h-4 w-4" />

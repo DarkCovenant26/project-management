@@ -35,7 +35,7 @@ export function useMultiSelect<T extends { id: number | string }>(items: T[]) {
                     newSelection.add(id);
                 }
             } else {
-                // Single select
+                // Single select - ONLY clear if not using a modifier
                 newSelection.clear();
                 newSelection.add(id);
             }
@@ -59,11 +59,37 @@ export function useMultiSelect<T extends { id: number | string }>(items: T[]) {
         return items.filter(i => selectedIds.has(i.id));
     }, [items, selectedIds]);
 
+    const selectMany = useCallback((ids: (number | string)[]) => {
+        const newSelection = new Set(selectedIds);
+        ids.forEach(id => newSelection.add(id));
+        setSelectedIds(newSelection);
+    }, [selectedIds]);
+
+    const deselectMany = useCallback((ids: (number | string)[]) => {
+        const newSelection = new Set(selectedIds);
+        ids.forEach(id => newSelection.delete(id));
+        setSelectedIds(newSelection);
+    }, [selectedIds]);
+
+    const toggleOne = useCallback((id: number | string) => {
+        const newSelection = new Set(selectedIds);
+        if (newSelection.has(id)) {
+            newSelection.delete(id);
+        } else {
+            newSelection.add(id);
+        }
+        setSelectedIds(newSelection);
+        setLastSelectedId(id);
+    }, [selectedIds]);
+
     return {
         selectedIds,
         selectedCount: selectedIds.size,
         isSelected,
         toggleSelection,
+        toggleOne,
+        selectMany,
+        deselectMany,
         selectAll,
         clearSelection,
         getSelectedItems,

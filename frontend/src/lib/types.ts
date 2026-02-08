@@ -27,6 +27,7 @@ export interface BoardColumn {
     title: string;
     status: string;
     visible: boolean;
+    wipLimit?: number;
 }
 
 export interface Project {

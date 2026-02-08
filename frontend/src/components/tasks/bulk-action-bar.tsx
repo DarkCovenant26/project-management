@@ -93,7 +93,7 @@ export function BulkActionBar({ selectedCount, selectedIds, onClear }: BulkActio
                         {STATUS_OPTIONS.map(option => (
                             <DropdownMenuItem
                                 key={option.value}
-                                onClick={() => performBulkAction({ action: 'set_status', data: { status: option.value } })}
+                                onClick={() => performBulkAction({ action: 'set_status', data: { value: option.value } })}
                             >
                                 {option.label}
                             </DropdownMenuItem>

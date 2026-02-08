@@ -16,12 +16,14 @@ interface SelectableTaskCardProps {
     task: Task;
     isSelected: boolean;
     onSelect: (id: string, event: React.MouseEvent) => void;
+    onToggleOne?: (id: string) => void;
     onToggleComplete?: (task: Task) => void;
     onEdit?: (task: Task) => void;
     onDelete?: (task: Task) => void;
 }
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
+    Critical: 'bg-red-600/20 text-red-600 border-red-600/30',
     High: 'bg-red-500/10 text-red-500 border-red-500/20',
     Medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
     Low: 'bg-green-500/10 text-green-500 border-green-500/20',
@@ -31,6 +33,7 @@ export function SelectableTaskCard({
     task,
     isSelected,
     onSelect,
+    onToggleOne,
     onToggleComplete,
     onEdit,
     onDelete,
@@ -62,7 +65,7 @@ export function SelectableTaskCard({
                 >
                     <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => onSelect(task.id, {} as React.MouseEvent)}
+                        onCheckedChange={() => onToggleOne?.(task.id)}
                     />
                 </div>
 

@@ -56,6 +56,9 @@ export function TasksContainer({ projectId, project }: TasksContainerProps) {
         selectedCount,
         isSelected,
         toggleSelection,
+        toggleOne,
+        selectMany,
+        deselectMany,
         clearSelection,
     } = useMultiSelect(filteredTasks);
 
@@ -73,7 +76,20 @@ export function TasksContainer({ projectId, project }: TasksContainerProps) {
     const renderView = () => {
         switch (view) {
             case 'board':
-                return <KanbanBoard tasks={filteredTasks} projectId={projectId} project={project} view={view} onViewChange={setView} />;
+                return (
+                    <KanbanBoard
+                        tasks={filteredTasks}
+                        projectId={projectId}
+                        project={project}
+                        view={view}
+                        onViewChange={setView}
+                        selectedTaskIds={Array.from(selectedIds)}
+                        onToggleSelection={toggleSelection}
+                        onToggleOne={(id) => toggleOne(id)}
+                        onSelectMany={(ids) => selectMany(ids)}
+                        onDeselectMany={(ids) => deselectMany(ids)}
+                    />
+                );
             case 'spreadsheet':
                 return <SpreadsheetView tasks={filteredTasks} onTaskUpdate={(task) => setSelectedTask(task)} />;
             case 'calendar':
@@ -99,6 +115,7 @@ export function TasksContainer({ projectId, project }: TasksContainerProps) {
                                                 e.stopPropagation();
                                                 toggleSelection(id, e);
                                             }}
+                                            onToggleOne={(id) => toggleOne(id)}
                                         />
                                     </div>
                                 ))}
