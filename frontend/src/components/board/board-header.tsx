@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/tooltip';
 
 interface BoardHeaderProps {
-    project?: Project;
     searchQuery: string;
     onSearchChange: (query: string) => void;
     columns: BoardColumnType[];
@@ -30,7 +29,7 @@ interface BoardHeaderProps {
     onPriorityFilterChange: (priority: string | null) => void;
 }
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
     High: 'from-red-500 to-rose-600',
     Medium: 'from-amber-500 to-orange-600',
     Low: 'from-blue-500 to-indigo-600',
@@ -44,7 +43,6 @@ const teamMembers = [
 ];
 
 export function BoardHeader({
-    project,
     searchQuery,
     onSearchChange,
     columns,

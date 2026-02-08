@@ -3,18 +3,25 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from pydantic import ValidationError
+
 from .models import QuickNote
 from .serializers import QuickNoteSerializer
+from .schemas import QuickNoteCreateSchema, QuickNoteUpdateSchema, ConvertToTaskSchema
 from tasks.models import Task
 from tasks.serializers import TaskSerializer
+from core.mixins import PydanticValidationMixin
 
-class QuickNoteViewSet(viewsets.ModelViewSet):
+
+class QuickNoteViewSet(PydanticValidationMixin, viewsets.ModelViewSet):
     serializer_class = QuickNoteSerializer
     permission_classes = [IsAuthenticated]
+    
+    # Pydantic schemas
+    pydantic_create_schema = QuickNoteCreateSchema
+    pydantic_update_schema = QuickNoteUpdateSchema
 
     def get_queryset(self):
-        # Return only non-archived notes by default, or all if requested?
-        # Let's stick to active notes usually, but maybe 'archived' filter
         queryset = QuickNote.objects.filter(user=self.request.user)
         archived = self.request.query_params.get('archived', None)
         if archived is not None:
@@ -35,21 +42,24 @@ class QuickNoteViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Pydantic validation for conversion data
+        try:
+            validated = ConvertToTaskSchema(**request.data)
+        except ValidationError as e:
+            errors = {err['loc'][0]: err['msg'] for err in e.errors()}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
         # Create task from note content
-        # We can accept additional data in the request body for the task (like project, due_date)
         task_data = {
-            'title': request.data.get('title', note.content[:50]), # Default title to start of note
-            'description': request.data.get('description', note.content),
+            'title': validated.title or note.content[:50],
+            'description': validated.description or note.content,
             'owner': request.user.id,
-            # Add other defaults or request data as needed
-            'status': 'backlog',
-            'priority': 'Medium',
+            'status': validated.status,
+            'priority': validated.priority,
         }
         
-        # Merge with other task fields if provided
-        for key in ['priority', 'status', 'project', 'due_date']:
-            if key in request.data:
-                task_data[key] = request.data[key]
+        if validated.project:
+            task_data['project'] = validated.project
 
         task_serializer = TaskSerializer(data=task_data, context={'request': request})
         if task_serializer.is_valid():
@@ -57,7 +67,7 @@ class QuickNoteViewSet(viewsets.ModelViewSet):
             
             # Link back to note
             note.converted_task = task
-            note.is_archived = True # Auto-archive after conversion
+            note.is_archived = True
             note.save()
             
             return Response(QuickNoteSerializer(note).data)

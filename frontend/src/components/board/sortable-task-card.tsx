@@ -11,7 +11,8 @@ import {
     Equal,
     Clock,
     Paperclip,
-    MessageSquare
+    MessageSquare,
+    AlertOctagon
 } from 'lucide-react';
 import { format, isPast, isToday, addDays, isBefore } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -22,24 +23,31 @@ interface SortableTaskCardProps {
     onClick?: (task: Task) => void;
 }
 
-const priorityConfig = {
+const priorityConfig: Record<string, any> = {
+    Critical: {
+        icon: <AlertOctagon className="h-3.5 w-3.5" />,
+        bg: 'bg-gradient-to-br from-red-600/20 to-pink-600/10',
+        border: 'border-red-600/30',
+        text: 'text-red-500',
+        glow: 'shadow-red-600/20 ring-1 ring-red-500/20'
+    },
     High: {
         icon: <ChevronUp className="h-3.5 w-3.5" />,
-        bg: 'bg-gradient-to-br from-red-500/20 to-red-600/10',
-        border: 'border-red-500/30',
-        text: 'text-red-400',
-        glow: 'shadow-red-500/20'
+        bg: 'bg-gradient-to-br from-orange-500/20 to-red-500/10',
+        border: 'border-orange-500/30',
+        text: 'text-orange-400',
+        glow: 'shadow-orange-500/20'
     },
     Medium: {
         icon: <Equal className="h-3.5 w-3.5" />,
-        bg: 'bg-gradient-to-br from-amber-500/20 to-amber-600/10',
+        bg: 'bg-gradient-to-br from-amber-500/20 to-yellow-600/10',
         border: 'border-amber-500/30',
         text: 'text-amber-400',
         glow: 'shadow-amber-500/20'
     },
     Low: {
         icon: <ChevronDown className="h-3.5 w-3.5" />,
-        bg: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10',
+        bg: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/10',
         border: 'border-blue-500/30',
         text: 'text-blue-400',
         glow: 'shadow-blue-500/20'
@@ -64,7 +72,7 @@ export function SortableTaskCard({ task, isDragging, onClick }: SortableTaskCard
     const isOverdue = task.dueDate ? isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate)) : false;
     const isDueSoon = task.dueDate && !isOverdue ? isBefore(new Date(task.dueDate), addDays(new Date(), 3)) : false;
 
-    const priority = priorityConfig[task.priority];
+    const priority = priorityConfig[task.priority] || priorityConfig['Medium'];
 
     return (
         <motion.div
@@ -73,10 +81,18 @@ export function SortableTaskCard({ task, isDragging, onClick }: SortableTaskCard
             {...attributes}
             {...listeners}
             onClick={() => onClick?.(task)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick?.(task);
+                }
+            }}
+            tabIndex={0}
+            role="button"
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             className={cn(
-                'group relative rounded-xl cursor-pointer transition-all duration-300 select-none',
+                'group relative rounded-xl cursor-pointer transition-all duration-300 select-none focus:outline-none focus:ring-2 focus:ring-primary/50',
                 'bg-gradient-to-br from-card via-card to-card/90',
                 'border border-white/10 hover:border-white/20',
                 'shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10',
@@ -86,23 +102,35 @@ export function SortableTaskCard({ task, isDragging, onClick }: SortableTaskCard
             {/* Hover Glow Effect */}
             <div className="absolute -inset-px rounded-xl bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
+            {/* Blocked Indicator */}
+            {task.blocked_by && task.blocked_by.length > 0 && (
+                <div className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground shadow-sm ring-2 ring-background">
+                    !
+                </div>
+            )}
+
             <div className="relative p-3.5 space-y-3">
-                {/* Color Tags */}
-                {task.tags && task.tags.length > 0 && (
+                {/* Header: Tags & Story Points */}
+                <div className="flex items-center justify-between">
                     <div className="flex flex-wrap gap-1.5">
-                        {task.tags.slice(0, 3).map(tag => (
+                        {task.tags && task.tags.slice(0, 3).map(tag => (
                             <div
                                 key={tag.id}
-                                className="h-2 w-10 rounded-full shadow-sm"
+                                className="h-1.5 w-6 rounded-full shadow-sm"
                                 style={{
                                     backgroundColor: tag.color,
-                                    boxShadow: `0 0 8px ${tag.color}40`
+                                    boxShadow: `0 0 6px ${tag.color}40`
                                 }}
                                 title={tag.name}
                             />
                         ))}
                     </div>
-                )}
+                    {task.storyPoints !== undefined && task.storyPoints > 0 && (
+                        <div className="flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-md bg-muted/50 border border-white/5 text-[10px] font-mono font-medium text-muted-foreground">
+                            {task.storyPoints}
+                        </div>
+                    )}
+                </div>
 
                 {/* Title & Priority */}
                 <div className="flex items-start justify-between gap-3">
@@ -169,30 +197,43 @@ export function SortableTaskCard({ task, isDragging, onClick }: SortableTaskCard
                                 <span>{format(new Date(task.dueDate), 'MMM d')}</span>
                             </div>
                         )}
-
-                        {/* Activity Indicators */}
-                        <div className="flex items-center gap-2 text-muted-foreground/50">
-                            <div className="flex items-center gap-0.5">
-                                <MessageSquare className="h-3 w-3" />
-                                <span className="text-[10px] tabular-nums">2</span>
-                            </div>
-                            <div className="flex items-center gap-0.5">
-                                <Paperclip className="h-3 w-3" />
-                                <span className="text-[10px] tabular-nums">1</span>
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Assignee Avatar */}
-                    <div className="flex items-center">
-                        <div className={cn(
-                            "h-6 w-6 rounded-full flex items-center justify-center",
-                            "bg-gradient-to-br from-violet-500 to-purple-600",
-                            "text-[9px] font-bold text-white uppercase",
-                            "ring-2 ring-card shadow-md"
-                        )}>
-                            {task.owner ? `U${task.owner}` : '??'}
-                        </div>
+                    {/* Assignees Avatars */}
+                    <div className="flex items-center -space-x-2">
+                        {task.assignees && task.assignees.length > 0 ? (
+                            task.assignees.slice(0, 3).map((assignee, i) => (
+                                <div
+                                    key={assignee.id}
+                                    className={cn(
+                                        "h-6 w-6 rounded-full flex items-center justify-center border-2 border-background",
+                                        "bg-gradient-to-br from-violet-500 to-purple-600",
+                                        "text-[9px] font-bold text-white uppercase",
+                                        "shadow-sm"
+                                    )}
+                                    title={assignee.username || assignee.email}
+                                    style={{ zIndex: 3 - i }}
+                                >
+                                    {(assignee.first_name?.[0] || assignee.username?.[0] || 'U').toUpperCase()}
+                                </div>
+                            ))
+                        ) : (
+                            task.owner && (
+                                <div className={cn(
+                                    "h-6 w-6 rounded-full flex items-center justify-center border-2 border-background",
+                                    "bg-gradient-to-br from-gray-500 to-slate-600",
+                                    "text-[9px] font-bold text-white uppercase",
+                                    "shadow-sm"
+                                )} title="Owner">
+                                    {(String(task.owner)[0] || 'U').toUpperCase()}
+                                </div>
+                            )
+                        )}
+                        {task.assignees && task.assignees.length > 3 && (
+                            <div className="h-6 w-6 rounded-full flex items-center justify-center border-2 border-background bg-muted text-[8px] font-bold text-muted-foreground z-0">
+                                +{task.assignees.length - 3}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

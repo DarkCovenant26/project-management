@@ -26,10 +26,9 @@ import { SubtaskItem } from './subtask-item';
 import { AddSubtaskInput } from './add-subtask-input';
 import { SubtaskProgress } from './subtask-progress';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 interface SubtaskListProps {
-    taskId: number;
+    taskId: string | number;
     subtasks: Subtask[];
     onSubtasksChange?: (subtasks: Subtask[]) => void;
 }
@@ -56,11 +55,11 @@ export function SubtaskList({ taskId, subtasks: initialSubtasks, onSubtasksChang
     });
 
     const { mutate: toggleSubtask } = useMutation({
-        mutationFn: (id: number) => {
+        mutationFn: (id: string) => {
             const subtask = subtasks.find(s => s.id === id);
             return updateSubtask(taskId, id, { isCompleted: !subtask?.isCompleted });
         },
-        onMutate: (id) => {
+        onMutate: (id: string) => {
             const updated = subtasks.map(s =>
                 s.id === id ? { ...s, isCompleted: !s.isCompleted } : s
             );
@@ -71,7 +70,7 @@ export function SubtaskList({ taskId, subtasks: initialSubtasks, onSubtasksChang
     });
 
     const { mutate: updateTitle } = useMutation({
-        mutationFn: ({ id, title }: { id: number; title: string }) =>
+        mutationFn: ({ id, title }: { id: string; title: string }) =>
             updateSubtask(taskId, id, { title }),
         onMutate: ({ id, title }) => {
             const updated = subtasks.map(s =>
@@ -84,8 +83,8 @@ export function SubtaskList({ taskId, subtasks: initialSubtasks, onSubtasksChang
     });
 
     const { mutate: removeSubtask } = useMutation({
-        mutationFn: (id: number) => deleteSubtask(taskId, id),
-        onMutate: (id) => {
+        mutationFn: (id: string) => deleteSubtask(taskId, id),
+        onMutate: (id: string) => {
             const updated = subtasks.filter(s => s.id !== id);
             setSubtasks(updated);
             onSubtasksChange?.(updated);
@@ -104,6 +103,7 @@ export function SubtaskList({ taskId, subtasks: initialSubtasks, onSubtasksChang
         setSubtasks(reordered);
         onSubtasksChange?.(reordered);
 
+        // Map existing subtask IDs which are strings
         reorderSubtasks(taskId, reordered.map(s => s.id));
     };
 

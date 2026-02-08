@@ -24,10 +24,18 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
     const queryClient = useQueryClient();
 
     const { mutate, isPending } = useMutation({
-        mutationFn: (data: TaskFormValues) => updateTask(task.id, {
-            ...data,
-            dueDate: data.dueDate?.toISOString(),
-        } as Partial<Task>),
+        mutationFn: (data: TaskFormValues) => {
+            const payload = {
+                ...data,
+                startDate: data.startDate?.toISOString(),
+                dueDate: data.dueDate?.toISOString(),
+                actualCompletionDate: data.actualCompletionDate?.toISOString(),
+                tag_ids: data.tagIds,
+                assignee_ids: data.assigneeIds,
+                blocked_by_ids: data.blockedByIds,
+            };
+            return updateTask(task.id, payload as unknown as Partial<Task>);
+        },
         onMutate: async (newData) => {
             // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
             await queryClient.cancelQueries({ queryKey: ['tasks', task.projectId] });

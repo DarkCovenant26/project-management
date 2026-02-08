@@ -2,13 +2,16 @@ from rest_framework import generics, permissions, pagination, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from pydantic import ValidationError
 
 from .models import Project
 from .member_models import ProjectMember
 from .serializers import ProjectSerializer, ProjectMemberSerializer
+from .schemas import ProjectCreateSchema, ProjectUpdateSchema, MemberAddSchema, MemberUpdateSchema
 from users.models import User
 
-from core.utils import log_grc_event
+from activity.signals import log_activity
+from core.permissions import CanManageProject
 
 
 class ProjectListCreateView(generics.ListCreateAPIView):
@@ -22,6 +25,16 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         member_of = Project.objects.filter(members__user=self.request.user)
         return (owned | member_of).distinct()
 
+    def create(self, request, *args, **kwargs):
+        # Pydantic validation
+        try:
+            validated = ProjectCreateSchema(**request.data)
+            request._full_data = validated.model_dump(exclude_unset=True, by_alias=False)
+        except ValidationError as e:
+            errors = {err['loc'][0]: err['msg'] for err in e.errors()}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         project = serializer.save(owner=self.request.user)
         # Auto-add creator as owner in ProjectMember
@@ -31,26 +44,36 @@ class ProjectListCreateView(generics.ListCreateAPIView):
             role='owner',
             invited_by=self.request.user
         )
-        log_grc_event(self.request.user, 'CREATE', 'PROJECT', project.id)
+        log_activity(self.request.user, 'created', 'project', project.id, project.name)
 
 
 class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, CanManageProject]
 
     def get_queryset(self):
         owned = Project.objects.filter(owner=self.request.user)
         member_of = Project.objects.filter(members__user=self.request.user)
         return (owned | member_of).distinct()
 
+    def update(self, request, *args, **kwargs):
+        # Pydantic validation
+        try:
+            validated = ProjectUpdateSchema(**request.data)
+            request._full_data = validated.model_dump(exclude_unset=True, by_alias=False)
+        except ValidationError as e:
+            errors = {err['loc'][0]: err['msg'] for err in e.errors()}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
     def perform_update(self, serializer):
         project = serializer.save()
-        log_grc_event(self.request.user, 'UPDATE', 'PROJECT', project.id)
+        log_activity(self.request.user, 'updated', 'project', project.id, project.name)
 
     def perform_destroy(self, instance):
         project_id = instance.id
         instance.delete()
-        log_grc_event(self.request.user, 'DELETE', 'PROJECT', project_id)
+        log_activity(self.request.user, 'deleted', 'project', project_id, project.name)
 
 
 class ProjectMemberViewSet(viewsets.ModelViewSet):
@@ -84,11 +107,15 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        email = request.data.get('email')
-        role = request.data.get('role', 'member')
-
-        if role not in ['admin', 'member', 'viewer']:
-            return Response({'error': 'Invalid role'}, status=status.HTTP_400_BAD_REQUEST)
+        # Pydantic validation
+        try:
+            validated = MemberAddSchema(**request.data)
+        except ValidationError as e:
+            errors = {err['loc'][0]: err['msg'] for err in e.errors()}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = validated.email
+        role = validated.role
 
         try:
             user = User.objects.get(email=email)
@@ -105,7 +132,7 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
             invited_by=request.user
         )
 
-        log_grc_event(request.user, 'ADD_MEMBER', 'PROJECT', project.id, extra={'member_id': str(member.id)})
+        log_activity(request.user, 'assigned', 'project', project.id, project.name, description=f"Added user '{user.username}' as {role}")
         
         return Response(ProjectMemberSerializer(member).data, status=status.HTTP_201_CREATED)
 
@@ -125,11 +152,18 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
         if member.role == 'owner':
             return Response({'error': 'Cannot modify owner role'}, status=status.HTTP_400_BAD_REQUEST)
 
-        new_role = request.data.get('role')
-        if new_role and new_role != 'owner':
+        # Pydantic validation
+        try:
+            validated = MemberUpdateSchema(**request.data)
+        except ValidationError as e:
+            errors = {err['loc'][0]: err['msg'] for err in e.errors()}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        new_role = validated.role
+        if new_role != 'owner':
             member.role = new_role
             member.save()
-            log_grc_event(request.user, 'UPDATE_MEMBER', 'PROJECT', project.id, extra={'member_id': str(member.id)})
+            log_activity(request.user, 'assigned', 'project', project.id, project.name, description=f"Updated user '{member.user.username}' role to {new_role}")
 
         return Response(ProjectMemberSerializer(member).data)
 
@@ -151,7 +185,7 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
 
         member_id = str(member.id)
         member.delete()
-        log_grc_event(request.user, 'REMOVE_MEMBER', 'PROJECT', project.id, extra={'member_id': member_id})
+        log_activity(request.user, 'removed', 'project', project.id, project.name, description=f"Removed user '{member.user.username}' from project")
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

@@ -18,9 +18,11 @@ import { KPIWidget } from '@/components/dashboard/widgets/kpi-widget';
 import { ChartWidget } from '@/components/dashboard/widgets/chart-widget';
 import { ActivityWidget } from '@/components/dashboard/widgets/activity-widget';
 import { WidgetGrid } from '@/components/dashboard/widget-grid';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { SortableWidget } from '@/components/dashboard/sortable-widget';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/layout/page-header';
 
 import {
     DndContext,
@@ -47,7 +49,7 @@ import { getCurrentUser } from '@/services/auth';
 const DEFAULT_WIDGETS = ['kpi-total', 'kpi-pending', 'kpi-done', 'chart-priority', 'chart-status', 'activity'];
 
 const WIDGET_SPANS: Record<string, string> = {
-    'activity': "lg:col-span-2 xl:col-span-2 2xl:col-span-3",
+    'activity': "lg:col-span-2 xl:col-span-2",
 };
 
 export default function DashboardPage() {
@@ -220,11 +222,11 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight">Dashboard</h1>
-                    <p className="text-xs text-muted-foreground">Manage your insights and project performance.</p>
-                </div>
+            <PageHeader
+                title="Dashboard"
+                description="Manage your insights and project performance"
+                icon={BarChart3}
+            >
                 <div className="flex gap-2">
                     <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
                         setWidgets(DEFAULT_WIDGETS);
@@ -232,9 +234,9 @@ export default function DashboardPage() {
                     }}>
                         Reset Layout
                     </Button>
-                    <CreateProjectDialog hideText={false} />
+                    <CreateProjectDialog hideText={false} className="w-auto" />
                 </div>
-            </div>
+            </PageHeader>
 
             <DndContext
                 sensors={sensors}
@@ -243,18 +245,20 @@ export default function DashboardPage() {
                 onDragEnd={handleDragEnd}
             >
                 <SortableContext items={widgets} strategy={rectSortingStrategy}>
-                    <WidgetGrid>
-                        {widgets.map(id => (
-                            <SortableWidget
-                                key={id}
-                                id={id}
-                                className={WIDGET_SPANS[id] || ""}
-                                isGhost={activeId === id}
-                            >
-                                {renderWidget(id)}
-                            </SortableWidget>
-                        ))}
-                    </WidgetGrid>
+                    <ErrorBoundary>
+                        <WidgetGrid>
+                            {widgets.map(id => (
+                                <SortableWidget
+                                    key={id}
+                                    id={id}
+                                    className={WIDGET_SPANS[id] || ""}
+                                    isGhost={activeId === id}
+                                >
+                                    {renderWidget(id)}
+                                </SortableWidget>
+                            ))}
+                        </WidgetGrid>
+                    </ErrorBoundary>
                 </SortableContext>
 
                 <DragOverlay dropAnimation={{

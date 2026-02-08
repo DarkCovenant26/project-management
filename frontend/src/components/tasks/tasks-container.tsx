@@ -19,7 +19,7 @@ import { CalendarView } from './calendar-view';
 import { KanbanSkeleton } from '@/components/board/kanban-skeleton';
 
 interface TasksContainerProps {
-    projectId?: number;
+    projectId?: string;
     project?: Project;
 }
 
@@ -124,17 +124,19 @@ export function TasksContainer({ projectId, project }: TasksContainerProps) {
     return (
         <div className="space-y-6">
             {view !== 'board' && (
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-1 px-1 bg-muted/20 rounded-xl border border-border/40 backdrop-blur-sm">
+                    <div className="relative flex-1 max-w-sm ml-1">
+                        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search tasks..."
-                            className="pl-9 h-9"
+                            className="pl-9 h-8 text-xs border-none bg-transparent focus-visible:ring-1 focus-visible:ring-primary/20"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <ViewToggle view={view} onViewChange={setView} />
+                    <div className="mr-1">
+                        <ViewToggle view={view} onViewChange={setView} />
+                    </div>
                 </div>
             )}
 
@@ -144,7 +146,6 @@ export function TasksContainer({ projectId, project }: TasksContainerProps) {
                 selectedCount={selectedCount}
                 selectedIds={selectedIds}
                 onClear={clearSelection}
-                projectId={projectId}
             />
 
             <TaskDetailSheet

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTask } from '@/services/tasks';
 import { addTaskTag, removeTaskTag } from '@/services/tags';
@@ -23,7 +22,7 @@ interface TaskDetailSheetProps {
     onClose: () => void;
 }
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
     High: 'bg-red-500/10 text-red-500 border-red-500/20',
     Medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
     Low: 'bg-green-500/10 text-green-500 border-green-500/20',

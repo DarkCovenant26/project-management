@@ -61,7 +61,10 @@ export const updateBoardSettings = async (projectId: number | string, columns: B
 // Member management API
 export const getProjectMembers = async (projectId: number | string): Promise<ProjectMember[]> => {
     const response = await api.get(`/projects/${projectId}/members/`);
-    return response.data;
+    if (Array.isArray(response.data)) {
+        return response.data;
+    }
+    return response.data.results || [];
 };
 
 export const addProjectMember = async (projectId: number | string, email: string, role: string): Promise<ProjectMember> => {

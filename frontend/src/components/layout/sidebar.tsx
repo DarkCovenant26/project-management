@@ -12,6 +12,8 @@ import { getProjects } from '@/services/projects';
 import { getCurrentUser } from '@/services/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect } from 'react';
 
 import { ProjectCard } from '@/components/projects/project-card';
@@ -66,7 +68,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                                 exit={{ opacity: 0 }}
                                 className="self-center whitespace-nowrap text-lg font-bold bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent origin-left pr-6"
                             >
-                                TaskMaster
+                                Scope
                             </motion.span>
                         ) : (
                             <motion.div
@@ -84,36 +86,47 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
 
                 <nav className="mb-4 space-y-1">
                     {mainNav.map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={cn(
-                                "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10",
-                                pathname === item.href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground",
-                                isCollapsed ? "justify-center px-0" : ""
-                            )}
-                        >
-                            <item.icon className={cn("h-4 w-4", isCollapsed ? "" : "mr-3")} />
-                            {!isCollapsed && <span>{item.name}</span>}
-                        </Link>
+                        <Tooltip key={item.href} delayDuration={300}>
+                            <TooltipTrigger asChild>
+                                <Link
+                                    href={item.href}
+                                    className={cn(
+                                        "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10",
+                                        pathname === item.href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground",
+                                        isCollapsed ? "justify-center px-0" : ""
+                                    )}
+                                    aria-label={item.name}
+                                >
+                                    <item.icon className={cn("h-4 w-4", isCollapsed ? "" : "mr-3")} />
+                                    {!isCollapsed && <span>{item.name}</span>}
+                                </Link>
+                            </TooltipTrigger>
+                            {isCollapsed && <TooltipContent side="right">{item.name}</TooltipContent>}
+                        </Tooltip>
                     ))}
 
-                    <Link
-                        href="/inbox"
-                        className={cn(
-                            "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10",
-                            pathname === '/inbox' ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground",
-                            isCollapsed ? "justify-center px-0" : ""
-                        )}
-                    >
-                        <Inbox className={cn("h-4 w-4", isCollapsed ? "" : "mr-3")} />
-                        {!isCollapsed && (
-                            <>
-                                <span>Inbox</span>
-                                <QuickCaptureSidebarBadge />
-                            </>
-                        )}
-                    </Link>
+                    <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                            <Link
+                                href="/inbox"
+                                className={cn(
+                                    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10",
+                                    pathname === '/inbox' ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground",
+                                    isCollapsed ? "justify-center px-0" : ""
+                                )}
+                                aria-label="Inbox"
+                            >
+                                <Inbox className={cn("h-4 w-4", isCollapsed ? "" : "mr-3")} />
+                                {!isCollapsed && (
+                                    <>
+                                        <span>Inbox</span>
+                                        <QuickCaptureSidebarBadge />
+                                    </>
+                                )}
+                            </Link>
+                        </TooltipTrigger>
+                        {isCollapsed && <TooltipContent side="right">Inbox</TooltipContent>}
+                    </Tooltip>
                 </nav>
 
                 <div className="mb-4 flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
@@ -131,7 +144,14 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                     )}
                     <ul className="space-y-0.5 px-1">
                         {isLoading ? (
-                            <li className="px-3 py-2 text-xs text-muted-foreground flex justify-center italic">Loading...</li>
+                            <div className="space-y-2 px-3">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex items-center gap-3 py-1">
+                                        <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                                        {!isCollapsed && <Skeleton className="h-4 w-full" />}
+                                    </div>
+                                ))}
+                            </div>
                         ) : projects?.results.length === 0 ? (
                             <li className="px-3 py-1 text-[11px] text-muted-foreground italic">No projects</li>
                         ) : projects?.results.map((project) => (
@@ -161,27 +181,39 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                     <div className={cn("flex items-center px-2", isCollapsed ? "flex-col gap-2" : "justify-between")}>
                         <div className="flex items-center gap-1">
                             <ModeToggle />
-                            <Link
-                                href="/settings"
-                                className={cn(
-                                    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 w-8",
-                                    pathname === '/settings' ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                                )}
-                            >
-                                <Settings className="h-4 w-4" />
-                            </Link>
+                            <Tooltip delayDuration={300}>
+                                <TooltipTrigger asChild>
+                                    <Link
+                                        href="/settings"
+                                        className={cn(
+                                            "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 w-8",
+                                            pathname === '/settings' ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                                        )}
+                                        aria-label="Settings"
+                                    >
+                                        <Settings className="h-4 w-4" />
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">Settings</TooltipContent>
+                            </Tooltip>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                                "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
-                                isCollapsed ? "h-8 w-8 p-0" : ""
-                            )}
-                            onClick={handleLogout}
-                        >
-                            <LogOut className="h-4 w-4" />
-                        </Button>
+                        <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                        "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                                        isCollapsed ? "h-8 w-8 p-0" : ""
+                                    )}
+                                    onClick={handleLogout}
+                                    aria-label="Logout"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Logout</TooltipContent>
+                        </Tooltip>
                     </div>
                 </div>
             </div>

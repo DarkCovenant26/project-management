@@ -25,10 +25,7 @@ export function QuickCaptureDialog() {
     // Actually, usually we don't want it inside input unless we handle it properly, but 'enableOnFormTags: true' allows escaping from input.
     // Let's stick to standard behavior: only when not typing, or specifically configured.
     // However, the standard behavior for command palette is usually global.
-    useHotkeys('meta+k, ctrl+k', (e) => {
-        e.preventDefault();
-        setOpen(prev => !prev);
-    });
+
 
     const { mutate: addNote, isPending } = useMutation({
         mutationFn: createQuickNote,

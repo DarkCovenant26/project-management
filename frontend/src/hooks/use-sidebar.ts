@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function useSidebar() {
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
-    // Load state from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('sidebar-collapsed');
-        if (saved !== null) {
-            setIsCollapsed(saved === 'true');
+    // Load state from localStorage on mount (lazy initialization)
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('sidebar-collapsed');
+            if (saved !== null) {
+                return saved === 'true';
+            }
         }
-    }, []);
+        return false;
+    });
 
     const toggle = () => {
         setIsCollapsed((prev) => {

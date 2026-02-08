@@ -23,6 +23,6 @@ export const deleteSubtask = async (taskId: number | string, subtaskId: number |
     await api.delete(`/tasks/${taskId}/subtasks/${subtaskId}/`);
 };
 
-export const reorderSubtasks = async (taskId: number | string, order: number[]): Promise<void> => {
+export const reorderSubtasks = async (taskId: number | string, order: (number | string)[]): Promise<void> => {
     await api.put(`/tasks/${taskId}/subtasks/reorder/`, { order });
 };

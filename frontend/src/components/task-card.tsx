@@ -19,9 +19,9 @@ import { cn } from '@/lib/utils';
 
 interface TaskCardProps {
     task: Task;
-    onToggle: (id: number, currentStatus: boolean) => void;
+    onToggle: (id: string, currentStatus: boolean) => void;
     onEdit?: (task: Task) => void;
-    onDelete?: (id: number) => void;
+    onDelete?: (id: string) => void;
 }
 
 export function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
@@ -39,17 +39,29 @@ export function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
 
             <div className="flex-1 space-y-1">
                 <div className="flex items-center justify-between">
-                    <h3 className={`font-medium ${task.isCompleted ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}>
+                    <h3 className={`font-medium ${task.isCompleted ? 'text-muted-foreground line-through' : 'text-card-foreground'} flex items-center gap-2`}>
+                        {task.blocked_by && task.blocked_by.length > 0 && (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive/10 text-destructive text-[10px] font-bold" title="Blocked by dependencies">
+                                !
+                            </span>
+                        )}
                         {task.title}
                     </h3>
                     <div className="flex items-center gap-2">
+                        {task.storyPoints !== undefined && task.storyPoints > 0 && (
+                            <Badge variant="outline" className="font-mono font-normal text-muted-foreground border-border bg-muted/50">
+                                {task.storyPoints} pts
+                            </Badge>
+                        )}
                         <Badge variant={
-                            task.priority === 'High' ? 'destructive' :
-                                task.priority === 'Medium' ? 'default' : 'secondary'
+                            task.priority === 'Critical' ? 'destructive' :
+                                task.priority === 'High' ? 'destructive' :
+                                    task.priority === 'Medium' ? 'default' : 'secondary'
                         } className={`
-                            ${task.priority === 'High' ? 'bg-red-100 text-red-700 hover:bg-red-100/80 dark:bg-red-900/30 dark:text-red-400' :
-                                task.priority === 'Medium' ? 'bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-900/30 dark:text-orange-400' :
-                                    'bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-900/30 dark:text-blue-400'}
+                            ${task.priority === 'Critical' ? 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-900 dark:text-red-100' :
+                                task.priority === 'High' ? 'bg-red-100 text-red-700 hover:bg-red-100/80 dark:bg-red-900/30 dark:text-red-400' :
+                                    task.priority === 'Medium' ? 'bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-900/30 dark:text-orange-400' :
+                                        'bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-900/30 dark:text-blue-400'}
                              border-transparent shadow-none
                         `}>
                             {task.priority}
@@ -111,9 +123,28 @@ export function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
                                 <span>{task.createdAt ? format(new Date(task.createdAt), 'MMM d') : 'No date'}</span>
                             </div>
                         )}
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                            <User className="h-3 w-3" />
-                            <span>Owner</span>
+
+                        {/* Assignees List */}
+                        <div className="flex items-center -space-x-2">
+                            {task.assignees && task.assignees.length > 0 ? (
+                                task.assignees.slice(0, 3).map((assignee, i) => (
+                                    <Avatar key={assignee.id} className="h-6 w-6 border-2 border-background ring-1 ring-border" style={{ zIndex: 3 - i }}>
+                                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                            {(assignee.first_name?.[0] || assignee.username?.[0] || 'U').toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                ))
+                            ) : (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                    <User className="h-3 w-3" />
+                                    <span>Owner</span>
+                                </div>
+                            )}
+                            {task.assignees && task.assignees.length > 3 && (
+                                <div className="h-6 w-6 rounded-full flex items-center justify-center border-2 border-background bg-muted text-[8px] font-bold text-muted-foreground z-0 ring-1 ring-border">
+                                    +{task.assignees.length - 3}
+                                </div>
+                            )}
                         </div>
                     </div>
 

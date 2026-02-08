@@ -21,6 +21,7 @@ class Task(models.Model):
         ('Low', 'Low'),
         ('Medium', 'Medium'),
         ('High', 'High'),
+        ('Critical', 'Critical'),
     ]
     
     STATUS_CHOICES = [
@@ -31,16 +32,38 @@ class Task(models.Model):
         ('done', 'Done'),
     ]
 
+    TASK_TYPE_CHOICES = [
+        ('Feature', 'Feature'),
+        ('Bug', 'Bug'),
+        ('Chore', 'Chore'),
+        ('Improvement', 'Improvement'),
+        ('Story', 'Story'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     is_completed = models.BooleanField(default=False)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='Medium')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='backlog')
+    task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default='Feature')
+    
+    # Agile Metrics
+    story_points = models.PositiveIntegerField(default=0, help_text="Agile estimation points")
+    time_estimate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Estimated hours")
+    time_spent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Actual hours spent")
+    
     start_date = models.DateTimeField(null=True, blank=True)
     due_date = models.DateTimeField(null=True, blank=True)
+    actual_completion_date = models.DateTimeField(null=True, blank=True)
     
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tasks')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_tasks')
+    assignees = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='assigned_tasks', blank=True)
+    
+    # Dependencies
+    blocked_by = models.ManyToManyField('self', symmetrical=False, related_name='blocking', blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -27,9 +27,8 @@ import { TaskStatus } from '@/lib/types';
 
 interface BulkActionBarProps {
     selectedCount: number;
-    selectedIds: Set<number | string>;
+    selectedIds: Set<string | number>;
     onClear: () => void;
-    projectId?: number;
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -39,7 +38,7 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
     { value: 'done', label: 'Done' },
 ];
 
-export function BulkActionBar({ selectedCount, selectedIds, onClear, projectId }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, selectedIds, onClear }: BulkActionBarProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const queryClient = useQueryClient();
 

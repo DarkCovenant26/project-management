@@ -15,7 +15,7 @@ import { SubtaskProgress } from '@/components/subtasks/subtask-progress';
 interface SelectableTaskCardProps {
     task: Task;
     isSelected: boolean;
-    onSelect: (id: number, event: React.MouseEvent) => void;
+    onSelect: (id: string, event: React.MouseEvent) => void;
     onToggleComplete?: (task: Task) => void;
     onEdit?: (task: Task) => void;
     onDelete?: (task: Task) => void;

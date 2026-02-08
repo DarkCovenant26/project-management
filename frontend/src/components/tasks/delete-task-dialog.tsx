@@ -59,7 +59,7 @@ export function DeleteTaskDialog({ task, open, onOpenChange }: DeleteTaskDialogP
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will permanently delete the task "<strong>{task.title}</strong>".
+                        This will permanently delete the task &quot;<strong>{task.title}</strong>&quot;.
                         This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>

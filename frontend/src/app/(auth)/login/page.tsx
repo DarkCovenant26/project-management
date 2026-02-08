@@ -15,60 +15,78 @@ export default function LoginPage() {
     // Backend uses 'username' and 'password'.
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+        setIsLoading(true);
         try {
+            console.log('Attempting login with:', { username });
             const response = await api.post('/auth/login/', { username, password });
+            console.log('Login success:', response.data);
+
             localStorage.setItem('access', response.data.access);
             localStorage.setItem('refresh', response.data.refresh);
             // Set cookie for middleware
             document.cookie = `access=${response.data.access}; path=/; max-age=86400; SameSite=Lax`;
             router.push('/dashboard');
-        } catch (err: unknown) {
-            console.error(err);
-            setError('Invalid credentials');
+        } catch (err: any) {
+            console.error('Login failed:', err.response?.data || err.message);
+            setError(err.response?.data?.detail || 'Invalid credentials');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-950">
-            <Card className="w-[350px] border-slate-800 bg-slate-900/50 backdrop-blur-xl text-slate-50">
+        <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
+            <Card className="w-[350px] border-border bg-card/50 backdrop-blur-xl">
                 <CardHeader>
-                    <CardTitle>Welcome Back</CardTitle>
-                    <CardDescription className="text-slate-400">Sign in to your account</CardDescription>
+                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent">Scope</CardTitle>
+                    <CardDescription className="text-muted-foreground">Secure Project Orchestration</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username" className="text-slate-200">Username</Label>
+                            <Label htmlFor="username">Username</Label>
                             <Input
                                 id="username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder="Enter your username"
-                                className="bg-slate-950/50 border-slate-800 text-slate-200"
+                                className="bg-muted/50 border-input"
+                                autoFocus
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password" className="text-slate-200">Password</Label>
+                            <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="********"
-                                className="bg-slate-950/50 border-slate-800 text-slate-200"
+                                className="bg-muted/50 border-input"
                             />
                         </div>
-                        {error && <p className="text-red-500 text-sm">{error}</p>}
-                        <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white">Sign In</Button>
+                        {error && <p className="text-destructive text-sm">{error}</p>}
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading ? (
+                                <>
+                                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                                    Signing In...
+                                </>
+                            ) : (
+                                'Sign In'
+                            )}
+                        </Button>
                     </form>
                 </CardContent>
                 <CardFooter className="justify-center">
-                    <p className="text-sm text-slate-400">
-                        Don&apos;t have an account? <Link href="/register" className="text-indigo-400 hover:text-indigo-300">Register</Link>
+                    <p className="text-sm text-muted-foreground">
+                        Don&apos;t have an account? <Link href="/register" className="text-primary hover:text-primary/80">Register</Link>
                     </p>
                 </CardFooter>
             </Card>

@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
 
 interface SubtaskItemProps {
     subtask: Subtask;
-    onToggle: (id: number) => void;
-    onUpdate: (id: number, title: string) => void;
-    onDelete: (id: number) => void;
+    onToggle: (id: string) => void;
+    onUpdate: (id: string, title: string) => void;
+    onDelete: (id: string) => void;
 }
 
 export function SubtaskItem({ subtask, onToggle, onUpdate, onDelete }: SubtaskItemProps) {

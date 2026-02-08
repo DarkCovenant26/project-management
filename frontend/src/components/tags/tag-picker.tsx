@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 interface TagPickerProps {
     value: Tag[];
     onChange: (tags: Tag[]) => void;
-    projectId?: number;
+    projectId?: string | number;
 }
 
 export function TagPicker({ value, onChange, projectId }: TagPickerProps) {

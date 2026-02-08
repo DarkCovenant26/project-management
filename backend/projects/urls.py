@@ -3,14 +3,14 @@ from .views import ProjectListCreateView, ProjectDetailView, ProjectMemberViewSe
 
 urlpatterns = [
     path('', ProjectListCreateView.as_view(), name='project-list-create'),
-    path('<int:pk>/', ProjectDetailView.as_view(), name='project-detail'),
+    path('<uuid:pk>/', ProjectDetailView.as_view(), name='project-detail'),
     
     # Member management endpoints
-    path('<int:project_pk>/members/', ProjectMemberViewSet.as_view({
+    path('<uuid:project_pk>/members/', ProjectMemberViewSet.as_view({
         'get': 'list',
         'post': 'create'
     }), name='project-members-list'),
-    path('<int:project_pk>/members/<uuid:pk>/', ProjectMemberViewSet.as_view({
+    path('<uuid:project_pk>/members/<uuid:pk>/', ProjectMemberViewSet.as_view({
         'get': 'retrieve',
         'patch': 'update',
         'delete': 'destroy'

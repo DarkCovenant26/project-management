@@ -10,13 +10,20 @@ from .serializers import TaskSerializer, SubtaskSerializer, BulkActionSerializer
 
 from core.utils import log_grc_event
 from activity.signals import log_activity
+from core.mixins import PydanticValidationMixin
+from core.permissions import CanEditTask, IsProjectMember
+from .schemas import TaskCreateSchema, TaskUpdateSchema, StatusUpdateSchema, SubtaskCreateSchema, SubtaskUpdateSchema
 
 
-class TaskViewSet(viewsets.ModelViewSet):
+class TaskViewSet(PydanticValidationMixin, viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     pagination_class = pagination.PageNumberPagination
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProjectMember, CanEditTask]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    # Pydantic schemas for validation
+    pydantic_create_schema = TaskCreateSchema
+    pydantic_update_schema = TaskUpdateSchema
     
     filterset_fields = ['is_completed', 'priority', 'project', 'status']
     search_fields = ['title', 'description']
@@ -64,12 +71,15 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'], url_path='status')
     def update_status(self, request, pk=None):
         """Quick status update endpoint for Kanban drag-and-drop."""
+        # Pydantic validation
+        try:
+            validated = StatusUpdateSchema(**request.data)
+        except Exception as e:
+            return Response({'status': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
         task = self.get_object()
         old_status = task.status
-        new_status = request.data.get('status')
-        
-        if new_status not in dict(Task.STATUS_CHOICES):
-            return Response({'status': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        new_status = validated.status
         
         task.status = new_status
         if new_status == 'done':
@@ -89,10 +99,14 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class SubtaskViewSet(viewsets.ModelViewSet):
+class SubtaskViewSet(PydanticValidationMixin, viewsets.ModelViewSet):
     """Nested ViewSet for subtasks under a task."""
     serializer_class = SubtaskSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProjectMember, CanEditTask]
+    
+    # Pydantic schemas
+    pydantic_create_schema = SubtaskCreateSchema
+    pydantic_update_schema = SubtaskUpdateSchema
 
     def get_queryset(self):
         task_id = self.kwargs.get('task_pk')

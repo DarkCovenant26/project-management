@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ModeToggle } from '@/components/mode-toggle';
+import { PageHeader } from '@/components/layout/page-header';
 
 export default function SettingsPage() {
     const queryClient = useQueryClient();
@@ -42,18 +43,11 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                    <Settings className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-bold opacity-70">
-                        Manage your preferences
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                title="Settings"
+                description="Manage your preferences"
+                icon={Settings}
+            />
 
             {/* Settings Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -167,7 +161,7 @@ export default function SettingsPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Appearance</CardTitle>
-                            <CardDescription>Customize how TaskMaster looks</CardDescription>
+                            <CardDescription>Customize how Scope looks</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex items-center justify-between">
@@ -186,7 +180,17 @@ export default function SettingsPage() {
                                         Reduce spacing for denser information display
                                     </p>
                                 </div>
-                                <Switch defaultChecked={user?.appPreferences?.compactMode === true} />
+                                <Switch
+                                    checked={user?.appPreferences?.compactMode === true}
+                                    onCheckedChange={(checked) => {
+                                        updateProfile({
+                                            appPreferences: {
+                                                ...user?.appPreferences,
+                                                compactMode: checked
+                                            }
+                                        });
+                                    }}
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -202,19 +206,23 @@ export default function SettingsPage() {
                         <CardContent>
                             <div className="grid gap-3">
                                 {[
-                                    { keys: ['⌘', 'K'], action: 'Open Command Palette' },
+                                    { keys: ['⌘', 'Shift', 'P'], action: 'Open Command Palette' },
+                                    { keys: ['Shift', '?'], action: 'Show Shortcuts Help' },
                                     { keys: ['⌘', 'N'], action: 'New Task' },
-                                    { keys: ['⌘', 'B'], action: 'Toggle Sidebar' },
-                                    { keys: ['⌘', '/'], action: 'Show Shortcuts' },
-                                    { keys: ['Esc'], action: 'Close Modal' },
+                                    { keys: ['⌘', 'Shift', 'N'], action: 'New Project' },
+                                    { keys: ['G', 'D'], action: 'Go to Dashboard' },
+                                    { keys: ['G', 'T'], action: 'Go to Tasks' },
+                                    { keys: ['G', 'B'], action: 'Go to Board' },
+                                    { keys: ['1'], action: 'Switch to List View' },
+                                    { keys: ['2'], action: 'Switch to Board View' },
                                 ].map((shortcut, i) => (
-                                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                                        <span className="text-sm">{shortcut.action}</span>
+                                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0 border-border/50">
+                                        <span className="text-sm font-medium">{shortcut.action}</span>
                                         <div className="flex gap-1">
                                             {shortcut.keys.map((key, j) => (
                                                 <kbd
                                                     key={j}
-                                                    className="px-2 py-1 text-xs font-semibold bg-muted rounded border"
+                                                    className="px-2 py-1 text-[10px] font-bold bg-muted rounded border border-input shadow-xs min-w-[24px] flex justify-center"
                                                 >
                                                     {key}
                                                 </kbd>

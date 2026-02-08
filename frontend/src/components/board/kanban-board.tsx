@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Task, TaskStatus, BoardColumn as BoardColumnType, Project } from '@/lib/types';
-import { updateTaskStatus, createTask } from '@/services/tasks';
+import { updateTask, createTask, updateTaskStatus } from '@/services/tasks';
 import { BoardColumn } from './board-column';
 import { DragOverlayCard } from './drag-overlay-card';
 import { TaskDetailSheet } from '@/components/tasks/task-detail-sheet';
@@ -31,7 +31,7 @@ import { BoardSettingsDialog } from './board-settings-dialog';
 interface KanbanBoardProps {
     tasks: Task[];
     project?: Project;
-    projectId?: number;
+    projectId?: string | number;
     columns?: BoardColumnType[];
     onColumnsChange?: (columns: BoardColumnType[]) => void;
     view?: ViewPreference;
@@ -47,11 +47,11 @@ const DEFAULT_COLUMNS: BoardColumnType[] = [
 ];
 
 const COLUMN_COLORS: Record<string, string> = {
-    backlog: 'hsl(220 14% 60%)',
-    todo: 'hsl(220 14% 50%)',
-    in_progress: 'hsl(210 100% 50%)',
-    review: 'hsl(45 100% 50%)',
-    done: 'hsl(142 76% 36%)',
+    backlog: 'var(--muted-foreground)',
+    todo: 'var(--primary)',
+    in_progress: 'var(--primary)',
+    review: 'hsl(var(--warning))',
+    done: 'hsl(var(--success, 142 76% 36%))',
 };
 
 export function KanbanBoard({ tasks, project, projectId, columns: propColumns, onColumnsChange, view = 'board', onViewChange }: KanbanBoardProps) {
@@ -78,8 +78,8 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
     );
 
     const { mutate: updateStatus } = useMutation({
-        mutationFn: ({ taskId, status }: { taskId: number; status: TaskStatus }) =>
-            updateTaskStatus(taskId, status),
+        mutationFn: ({ taskId, status }: { taskId: string | number; status: TaskStatus }) =>
+            updateTask(taskId, { status }),
         onMutate: async ({ taskId, status }) => {
             const actualProjectId = projectId || project?.id;
             await queryClient.cancelQueries({ queryKey: ['tasks', actualProjectId] });
@@ -160,7 +160,7 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
 
         if (!over) return;
 
-        const taskId = active.id as number;
+        const taskId = active.id as string;
         const overId = over.id;
 
         // Check if dropped on a column (by column id or status)
@@ -179,7 +179,7 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
         const { active, over } = event;
         if (!over) return;
 
-        const activeId = active.id as number;
+        const activeId = active.id as string;
         const overId = over.id;
 
         const overColumn = columns.find(col => col.id === overId || col.status === overId);
@@ -196,7 +196,11 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
 
     const { mutate: addTask } = useMutation({
         mutationFn: ({ title, status }: { title: string; status: TaskStatus }) =>
-            createTask({ title, status, projectId: projectId || project?.id }),
+            createTask({
+                title,
+                status,
+                projectId: (projectId || project?.id)?.toString()
+            }),
         onSuccess: () => {
             const actualProjectId = projectId || project?.id;
             queryClient.invalidateQueries({ queryKey: ['tasks', actualProjectId] });
@@ -218,7 +222,6 @@ export function KanbanBoard({ tasks, project, projectId, columns: propColumns, o
             <div className="flex items-center gap-4">
                 <div className="flex-1">
                     <BoardHeader
-                        project={project}
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
                         columns={columns}

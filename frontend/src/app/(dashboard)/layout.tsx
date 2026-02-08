@@ -1,5 +1,6 @@
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ShortcutsProvider } from "@/components/providers/shortcuts-provider";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default function Layout({
     children,
@@ -9,7 +10,9 @@ export default function Layout({
     return (
         <ShortcutsProvider>
             <DashboardLayout>
-                {children}
+                <ErrorBoundary>
+                    {children}
+                </ErrorBoundary>
             </DashboardLayout>
         </ShortcutsProvider>
     );

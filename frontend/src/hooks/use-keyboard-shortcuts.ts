@@ -22,7 +22,7 @@ export function useKeyboardShortcuts({
     const router = useRouter();
 
     // Command palette
-    useHotkeys('ctrl+k, meta+k', (e) => {
+    useHotkeys('ctrl+shift+p, meta+shift+p', (e) => {
         e.preventDefault();
         onOpenCommandPalette();
     }, { enableOnFormTags: false });

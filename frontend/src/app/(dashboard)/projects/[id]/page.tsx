@@ -6,12 +6,12 @@ import { getProject } from '@/services/projects';
 import { CreateTaskDialog } from '@/components/tasks/create-task-dialog';
 import { TasksContainer } from '@/components/tasks/tasks-container';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Folder } from 'lucide-react';
+import { PageHeader } from '@/components/layout/page-header';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
     const projectId = resolvedParams.id;
-    const projectIdNum = parseInt(projectId);
 
     const { data: project, isLoading: isLoadingProject } = useQuery({
         queryKey: ['projects', projectId],
@@ -29,21 +29,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     return (
         <ErrorBoundary>
             <div className="space-y-6">
-                {/* Project Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{project?.title}</h1>
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold opacity-70">
-                            {project?.description || 'Project Workspace'}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <CreateTaskDialog projectId={projectIdNum} />
-                    </div>
-                </div>
+                <PageHeader
+                    title={project?.title || 'Project'}
+                    description={project?.description || 'Project Workspace'}
+                    icon={Folder}
+                >
+                    <CreateTaskDialog projectId={projectId} />
+                </PageHeader>
 
                 {/* Tasks Container (Handles view switching, filtering, and tasks) */}
-                <TasksContainer projectId={projectIdNum} />
+                <TasksContainer projectId={projectId} />
             </div>
         </ErrorBoundary>
     );

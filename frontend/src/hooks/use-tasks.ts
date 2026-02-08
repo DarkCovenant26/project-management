@@ -3,7 +3,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getTasks } from '@/services/tasks';
 
-export function useInfiniteTasks(projectId?: number | string) {
+export function useInfiniteTasks(projectId?: string | number) {
     return useInfiniteQuery({
         queryKey: ['tasks', projectId],
         queryFn: ({ pageParam = 1 }) => getTasks({ projectId, page: pageParam }),

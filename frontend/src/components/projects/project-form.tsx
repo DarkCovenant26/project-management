@@ -16,6 +16,7 @@ import {
     FormLabel,
     FormMessage
 } from '@/components/ui/form';
+import { Loader2 } from 'lucide-react';
 
 interface ProjectFormProps {
     initialData?: Project;
@@ -66,8 +67,17 @@ export function ProjectForm({ initialData, onSubmit, isSubmitting }: ProjectForm
                     )}
                 />
                 <DialogFooter className="pt-4">
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Saving...' : initialData ? 'Update Project' : 'Create Project'}
+                    <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : initialData ? (
+                            'Update Project'
+                        ) : (
+                            'Create Project'
+                        )}
                     </Button>
                 </DialogFooter>
             </form>

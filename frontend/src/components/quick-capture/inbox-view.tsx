@@ -6,8 +6,9 @@ import { getQuickNotes, convertToTask, updateQuickNote, deleteQuickNote } from '
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowRight, Archive, CheckCircle2, Clock, Trash2, Calendar } from 'lucide-react';
+import { Loader2, ArrowRight, Archive, CheckCircle2, Clock, Trash2, Calendar, Inbox } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { PageHeader } from '@/components/layout/page-header';
 import { toast } from 'sonner';
 import {
     Dialog,
@@ -55,17 +56,15 @@ export function InboxView() {
 
     return (
         <div className="container max-w-5xl py-6 space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Inbox</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Triage your quick notes into actionable tasks.
-                    </p>
-                </div>
+            <PageHeader
+                title="Inbox"
+                description="Triage your quick notes into actionable tasks"
+                icon={Inbox}
+            >
                 <Badge variant="secondary" className="px-3 py-1 text-sm">
                     {notes.length} Active Notes
                 </Badge>
-            </div>
+            </PageHeader>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {notes.map((note) => (

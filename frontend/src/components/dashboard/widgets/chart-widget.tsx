@@ -3,6 +3,7 @@
 import React from 'react';
 import { BaseWidget } from './base-widget';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ChartDataItem {
     label: string;
@@ -47,8 +48,8 @@ export function ChartWidget({
                     <div className="space-y-3">
                         {[1, 2, 3].map(i => (
                             <div key={i} className="space-y-1">
-                                <div className="h-3 w-16 bg-muted animate-pulse rounded" />
-                                <div className="h-2 w-full bg-muted animate-pulse rounded" />
+                                <Skeleton className="h-3 w-16" />
+                                <Skeleton className="h-2 w-full" />
                             </div>
                         ))}
                     </div>

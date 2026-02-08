@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Tag as TagIcon, Loader2, Check } from 'lucide-react';
+import { Plus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Tag } from '@/lib/types';
-import { getTags, createTag, deleteTag } from '@/services/tags';
+import { getTags, createTag } from '@/services/tags';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ interface TagPickerProps {
     selectedTags: Tag[];
     onAddTag: (tagId: number) => void;
     onRemoveTag: (tagId: number) => void;
-    projectId?: number;
+    projectId?: string | number;
 }
 
 const TAG_COLORS = [
@@ -57,10 +57,11 @@ export function TagPicker({ selectedTags = [], onAddTag, onRemoveTag, projectId 
         queryFn: () => getTags(projectId),
     });
 
-    const tags = tagsData?.results || [];
+    const tags = useMemo(() => tagsData?.results || [], [tagsData]);
 
     const { mutate: createNewTag, isPending: isCreatingTag } = useMutation({
-        mutationFn: (data: { name: string; color: string; projectId?: number }) => createTag(data),
+        mutationFn: (data: { name: string; color: string; projectId?: string | number }) =>
+            createTag({ ...data, projectId: data.projectId ? String(data.projectId) : undefined }),
         onSuccess: (newTag) => {
             queryClient.invalidateQueries({ queryKey: ['tags'] });
             onAddTag(newTag.id);

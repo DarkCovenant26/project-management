@@ -15,66 +15,84 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
+        setError('');
         try {
             await api.post('/auth/register/', { username, email, password });
             router.push('/login');
         } catch (err: unknown) {
             console.error(err);
             setError('Registration failed. Username might be taken.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-950">
-            <Card className="w-[350px] border-slate-800 bg-slate-900/50 backdrop-blur-xl text-slate-50">
+        <div className="flex items-center justify-center min-h-screen bg-background">
+            <Card className="w-[350px] border-border bg-card/50 backdrop-blur-xl text-card-foreground">
                 <CardHeader>
-                    <CardTitle>Create Account</CardTitle>
-                    <CardDescription className="text-slate-400">Start managing tasks today</CardDescription>
+                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent underline-offset-4">Join Scope</CardTitle>
+                    <CardDescription className="text-muted-foreground">High-end productivity awaits</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleRegister} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username" className="text-slate-200">Username</Label>
+                            <Label htmlFor="username">Username</Label>
                             <Input
                                 id="username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder="jdoe"
-                                className="bg-slate-950/50 border-slate-800 text-slate-200"
+                                className="bg-background/50 border-input"
+                                autoFocus
+                                required
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-slate-200">Email</Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="jdoe@example.com"
-                                className="bg-slate-950/50 border-slate-800 text-slate-200"
+                                className="bg-background/50 border-input"
+                                required
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password" className="text-slate-200">Password</Label>
+                            <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="********"
-                                className="bg-slate-950/50 border-slate-800 text-slate-200"
+                                className="bg-background/50 border-input"
+                                required
                             />
                         </div>
-                        {error && <p className="text-red-500 text-sm">{error}</p>}
-                        <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white">Register</Button>
+                        {error && <p className="text-destructive text-sm font-medium">{error}</p>}
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading}>
+                            {isLoading ? (
+                                <>
+                                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                                    Creating Account...
+                                </>
+                            ) : (
+                                'Register'
+                            )}
+                        </Button>
                     </form>
                 </CardContent>
-                <CardFooter className="justify-center">
-                    <p className="text-sm text-slate-400">
-                        Already have an account? <Link href="/login" className="text-indigo-400 hover:text-indigo-300">Sign In</Link>
+                <CardFooter className="justify-center border-t border-border/50 pt-4">
+                    <p className="text-sm text-muted-foreground">
+                        Already have an account? <Link href="/login" className="text-primary hover:text-primary/80 transition-colors font-semibold">Sign In</Link>
                     </p>
                 </CardFooter>
             </Card>

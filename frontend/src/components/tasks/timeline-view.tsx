@@ -9,7 +9,6 @@ import {
     differenceInDays,
     addHours,
     differenceInHours,
-    startOfDay,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { updateTask } from '@/services/tasks';
@@ -18,7 +17,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface TimelineViewProps {
     tasks: Task[];
-    projectId?: number;
+    projectId?: string | number;
 }
 
 const DAY_WIDTH = 100;
@@ -28,7 +27,7 @@ export const TimelineView = React.memo(({ tasks, projectId }: TimelineViewProps)
     const queryClient = useQueryClient();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [dragging, setDragging] = useState<{
-        taskId: number;
+        taskId: string | number;
         initialX: number;
         startX: number;
         width: number;
@@ -40,7 +39,7 @@ export const TimelineView = React.memo(({ tasks, projectId }: TimelineViewProps)
         [startDate]);
 
     const { mutate: performUpdate } = useMutation({
-        mutationFn: ({ id, data }: { id: number, data: Partial<Task> }) => updateTask(id, data),
+        mutationFn: ({ id, data }: { id: string | number, data: Partial<Task> }) => updateTask(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
             toast.success('Task rescheduled');

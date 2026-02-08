@@ -22,7 +22,7 @@ import { ColorPicker, TAG_COLORS } from './color-picker';
 import { TagBadge } from './tag-badge';
 
 interface TagManagerDialogProps {
-    projectId?: number;
+    projectId?: string | number;
     trigger?: React.ReactNode;
 }
 
@@ -42,7 +42,8 @@ export function TagManagerDialog({ projectId, trigger }: TagManagerDialogProps) 
     const tags = tagsData?.results || [];
 
     const { mutate: create, isPending: isCreating } = useMutation({
-        mutationFn: (data: { name: string; color: string; projectId?: number }) => createTag(data),
+        mutationFn: (data: { name: string; color: string; projectId?: string | number }) =>
+            createTag({ ...data, projectId: data.projectId?.toString() }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tags', projectId] });
             toast.success('Tag created');

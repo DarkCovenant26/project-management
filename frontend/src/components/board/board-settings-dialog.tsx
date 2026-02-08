@@ -17,7 +17,7 @@ import { updateBoardSettings } from '@/services/projects';
 import { cn } from '@/lib/utils';
 
 interface BoardSettingsDialogProps {
-    projectId: number;
+    projectId: string | number;
     columns: BoardColumn[];
     onColumnsChange?: (columns: BoardColumn[]) => void;
 }

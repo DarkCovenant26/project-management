@@ -1,5 +1,5 @@
 export interface User {
-    id: number;
+    id: number; // User ID is still AutoField (int) in standard Django Auth unless custom user model changed it
     username: string;
     email: string;
     first_name?: string;
@@ -30,12 +30,12 @@ export interface BoardColumn {
 }
 
 export interface Project {
-    id: number;
+    id: string; // UUID
     title: string;
     description?: string;
     createdAt: string;
     updatedAt: string;
-    owner: number;
+    owner: number; // User ID is int
     boardSettings?: { columns: BoardColumn[] };
     boardColumns?: BoardColumn[];
     members?: ProjectMember[];
@@ -43,7 +43,7 @@ export interface Project {
 }
 
 export interface ProjectMember {
-    id: string;
+    id: string; // UUID
     userId: number;
     username: string;
     email: string;
@@ -56,42 +56,57 @@ export interface ProjectMember {
 export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'review' | 'done';
 
 export interface Tag {
-    id: number;
+    id: string; // UUID
     name: string;
     color: string;
-    projectId?: number;
+    projectId?: string; // UUID
 }
 
 export interface Subtask {
-    id: number;
+    id: string; // UUID
     title: string;
     isCompleted: boolean;
     order: number;
-    taskId: number;
+    taskId: string; // UUID
 }
 
 export interface Activity {
-    id: number;
-    action: 'created' | 'updated' | 'completed' | 'deleted';
+    id: string; // UUID
+    action: 'created' | 'updated' | 'completed' | 'deleted' | 'status_changed' | 'assigned' | 'tagged' | 'untagged' | 'rearranged' | 'interacted';
     description: string;
     userId: number;
     user?: User;
-    taskId?: number;
-    projectId?: number;
+    taskId?: string; // UUID
+    projectId?: string; // UUID
     createdAt: string;
 }
 
 export interface Task {
-    id: number;
+    id: string; // UUID
     title: string;
     description?: string;
     isCompleted: boolean;
     status: TaskStatus;
-    priority: 'Low' | 'Medium' | 'High';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    task_type: 'Feature' | 'Bug' | 'Chore' | 'Improvement' | 'Story';
+
     startDate?: string;
     dueDate?: string;
-    projectId?: number;
+    actualCompletionDate?: string;
+
+    // Agile Metrics
+    storyPoints?: number;
+    timeEstimate?: number; // hours
+    timeSpent?: number; // hours
+
+    projectId?: string; // UUID
     owner: number;
+    assignees?: User[];
+
+    // Dependencies
+    blocked_by?: Task[];
+    blocked_by_ids?: string[];
+
     tags?: Tag[];
     subtasks?: Subtask[];
     createdAt: string;

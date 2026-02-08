@@ -18,7 +18,7 @@ import { Task } from '@/lib/types';
 import { TaskFormValues } from '@/lib/validations/task';
 
 interface CreateTaskDialogProps {
-    projectId: number;
+    projectId: string | number;
 }
 
 export function CreateTaskDialog({ projectId }: CreateTaskDialogProps) {
@@ -26,10 +26,24 @@ export function CreateTaskDialog({ projectId }: CreateTaskDialogProps) {
     const queryClient = useQueryClient();
 
     const { mutate, isPending } = useMutation({
-        mutationFn: (data: TaskFormValues) => createTask({
-            ...data,
-            dueDate: data.dueDate?.toISOString(),
-        } as Partial<Task>),
+        mutationFn: (data: TaskFormValues) => {
+            const payload = {
+                ...data,
+                projectId: projectId.toString(),
+                startDate: data.startDate?.toISOString(),
+                dueDate: data.dueDate?.toISOString(),
+                actualCompletionDate: data.actualCompletionDate?.toISOString(),
+                tag_ids: data.tagIds,
+                assignee_ids: data.assigneeIds,
+                blocked_by_ids: data.blockedByIds,
+            };
+            // Remove camelCase versions to avoid clutter/confusion, though backend ignores them
+            delete (payload as any).tagIds;
+            delete (payload as any).assigneeIds;
+            delete (payload as any).blockedByIds;
+
+            return createTask(payload as unknown as Partial<Task>);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
             toast.success('Task created successfully');

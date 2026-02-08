@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { QuickCaptureDialog } from '@/components/quick-capture/quick-capture-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { isCollapsed, toggle } = useSidebar();
@@ -15,17 +16,25 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <Sidebar isCollapsed={isCollapsed} />
 
             {/* Sidebar Toggle Button - Clean & Sharp */}
-            <Button
-                variant="outline"
-                size="icon"
-                className={cn(
-                    "fixed top-8 z-[60] h-5 w-5 rounded-full border bg-background shadow-xs hover:bg-accent transition-all duration-300 flex items-center justify-center",
-                    isCollapsed ? "left-[54px]" : "left-[246px]"
-                )}
-                onClick={toggle}
-            >
-                {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-            </Button>
+            <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className={cn(
+                            "fixed top-8 z-[60] h-5 w-5 rounded-full border bg-background shadow-xs hover:bg-accent transition-all duration-300 flex items-center justify-center",
+                            isCollapsed ? "left-[54px]" : "left-[246px]"
+                        )}
+                        onClick={toggle}
+                        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                    {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                </TooltipContent>
+            </Tooltip>
 
             <main className={cn(
                 "flex-1 overflow-y-auto transition-all duration-300",

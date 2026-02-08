@@ -3,6 +3,7 @@
 import React from 'react';
 import { BaseWidget } from './base-widget';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface KPIWidgetProps {
     title: string;
@@ -41,8 +42,8 @@ export function KPIWidget({
             <div className="flex flex-col justify-center h-full space-y-1">
                 {loading ? (
                     <div className="space-y-2">
-                        <div className="h-8 w-24 bg-muted animate-pulse rounded" />
-                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-4 w-32" />
                     </div>
                 ) : (
                     <>
